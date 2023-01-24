@@ -1,0 +1,35 @@
+---
+title: "Generative Topographic Mapping"
+date: last-modified
+author: "John Waczak"
+body-header: last-modified
+format:
+    pdf: default
+    html:
+      html-math-method: katex
+
+reference-location: margin
+citation-location: margin
+---
+
+## Parametric Plots
+
+Plot function pair (x(u), y(u)). 
+See @fig-parametric for an example.
+
+```{julia}
+#| label: fig-parametric
+#| fig-cap: "Parametric Plots"
+
+using Pkg 
+Pkg.activate(".")
+
+using Plots
+
+plot(sin, 
+     x->sin(2x), 
+     0, 
+     2π, 
+     leg=false, 
+     fill=(0,:lavender))
+```
