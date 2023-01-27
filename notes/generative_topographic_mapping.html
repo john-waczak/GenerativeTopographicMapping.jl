@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 <meta name="author" content="John Waczak">
-<meta name="dcterms.date" content="2023-01-24">
+<meta name="dcterms.date" content="2023-01-26">
 
 <title>Generative Topographic Mapping</title>
 <style>
@@ -143,7 +143,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">January 24, 2023</p>
+      <p class="date">January 26, 2023</p>
     </div>
   </div>
   
@@ -406,53 +406,53 @@ p(W) = \left(\frac{\alpha}{2\pi}\right)^{W/2}\exp(-\frac{\alpha}{2}\lVert W \rVe
 </section>
 <section id="coding-things-up" class="level1">
 <h1>Coding Things Up!</h1>
-<div class="cell" data-execution_count="201">
+<div class="cell" data-execution_count="1">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">using</span> <span class="bu">Pkg </span></span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="bu">Pkg</span>.<span class="fu">activate</span>(<span class="st">"."</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stderr">
 <pre><code>  Activating project at `~/gitrepos/machine-learning/GTM.jl/notes`</code></pre>
 </div>
 </div>
-<div class="cell" data-execution_count="202">
+<div class="cell" data-execution_count="2">
 <div class="sourceCode cell-code" id="cb3"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">using</span> <span class="bu">Plots</span>, <span class="bu">LinearAlgebra</span>, <span class="bu">Statistics</span>, <span class="bu">Distributions</span>, <span class="bu">MLJ</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Create a sample dataset using MLJ. We will use a classification set so that we can see if GTM can distinguish the classes after fitting.</p>
 <p>The table <code>X</code> contains our data (each row is one datum) with class labels in <code>y</code></p>
-<div class="cell" data-execution_count="203">
+<div class="cell" data-execution_count="3">
 <div class="sourceCode cell-code" id="cb4"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">using</span> <span class="bu">Tables</span></span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>DataX,Datay<span class="op">=</span> <span class="fu">make_blobs</span>(<span class="fl">500</span>, <span class="fl">10</span>; centers<span class="op">=</span><span class="fl">5</span>)</span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>𝒟 <span class="op">=</span> Tables.<span class="fu">matrix</span>(DataX)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="203">
+<div class="cell-output cell-output-display" data-execution_count="3">
 <pre><code>500×10 Matrix{Float64}:
-  5.8199   -0.23623      5.95858   …   6.59544  -0.736488   2.55719
- -3.75379   4.73507    -10.0517        6.59447  -1.83786   -2.91499
- -5.25946  -0.0990778    0.211652     -9.92081  -4.07789    2.46497
- -6.16105   8.47455      9.40879      -4.53639   5.3206     5.95747
-  6.16938  -1.21366      4.85269       7.51401  -1.62565    4.25148
- -5.9724    9.1843       8.11657   …  -6.27974   7.19353    7.31728
-  5.11808  -1.42707      5.14949       7.82429  -1.52409    3.36089
- -1.78893  -5.15365     -0.662932     -3.18957   9.00017   -3.81975
- -1.00818  -2.86494      0.343802     -3.89628  10.4125    -6.1042
-  4.66625   0.058438     5.74507       7.57577  -4.32329    4.48464
-  4.16042  -0.606794     5.42266   …   7.49471  -2.35107    5.15123
- -2.80741   4.54917     -6.11905       5.47836  -1.92685   -1.74805
- -2.56221  -3.71248     -0.777029     -4.48369   9.50519   -7.16659
-  ⋮                                ⋱                       
- -3.95958   3.18199     -7.24262       5.23833  -2.08023   -3.74225
- -7.80112   8.90108      8.44736      -3.72501   6.97767    6.76299
- -8.0141    9.61691     11.1378    …  -4.29061   4.79243    6.03762
- -3.06065  -5.48419     -1.36768      -3.62517   8.05097   -4.4286
- -3.01497   4.70408     -9.61578       6.1013   -4.2373    -3.86683
-  6.21821  -2.7859       7.06395       7.04389  -2.97884    7.03808
-  5.57213  -0.915033     3.2505        6.96442  -3.7197     7.09872
- -7.3109    1.01612      3.21817   …  -7.27703  -6.09201    2.46387
- -6.81073  11.2765       9.76835      -4.07706   5.85822    7.20896
- -6.27491   0.398253     0.485098     -7.09156  -3.92557    1.5792
- -1.46093  -4.77424     -0.958444     -4.2627   10.0929    -5.18338
- -1.63404  -6.41701     -0.105115     -2.16537   8.01982   -5.70245</code></pre>
+ -6.89213  -0.591606    8.79375  …   2.6749    -4.47481    2.8642
+ -5.76369   0.72814     6.09521     -5.41723   -1.16301    7.30158
+  8.94004  -0.591369    9.1815      -4.36022    0.547718  -5.47387
+  5.27456   5.29026    -8.53169     -2.69048    8.02274    0.23124
+ -6.38      7.86484    -8.12333      1.88265    3.91803    0.228869
+ -4.80034   2.92024     6.43425  …  -7.60034    0.842018   5.43513
+  3.34243   3.09758    -8.48063     -2.65571    8.08795    0.560071
+  5.42568   5.77196    -9.44534     -3.19474    9.72166   -0.220025
+ -4.20296   7.32864    -8.09361     -0.913384   3.59333    1.8732
+ -6.85845   9.43648    -8.29228      0.720007   3.75365    0.119073
+ -4.75319   1.49454     5.74735  …  -5.81812   -0.223656   6.68464
+  5.4441    6.48556    -7.7276      -1.12786    9.56342   -1.3166
+  4.73433   4.78356    -8.41132     -3.33798    7.3056     0.68346
+  ⋮                              ⋱                        
+ -4.07738   2.36815     5.90354     -5.71817   -0.459386   6.85579
+  8.42064  -1.66222     7.11764     -5.09643    1.89773   -5.06988
+  6.21052   4.53885    -8.40088  …  -3.17634    8.79434   -0.0294988
+ -5.23742   9.98947    -6.99824      1.76778    1.53851   -0.0457416
+ -6.65271   9.06775    -6.70772     -0.43361    3.18299   -0.00959754
+ -5.7589   -2.32311    10.3103       3.74598   -6.75062    3.85739
+  3.88383   5.09058   -10.1019      -3.3818     9.38426    0.119645
+ -5.76267  -3.84153     7.79376  …   4.14541   -6.24317    3.79281
+  9.03166  -1.22142     7.54346     -4.78046    1.97903   -4.75352
+  4.16339   3.60893    -9.71716     -4.56898    9.0408    -0.182844
+  3.74834   3.54722   -10.0067      -3.98367    8.80101    0.711452
+ -5.81974   0.846791    5.70333     -6.02427   -0.92559    5.08015</code></pre>
 </div>
 </div>
-<div class="cell" data-execution_count="204">
+<div class="cell" data-execution_count="4">
 <div class="sourceCode cell-code" id="cb6"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 1. GTM  parameters</span></span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>k <span class="op">=</span> <span class="fl">10</span>  <span class="co"># there are K=k² total latent nodes</span></span>
@@ -461,11 +461,11 @@ p(W) = \left(\frac{\alpha}{2\pi}\right)^{W/2}\exp(-\frac{\alpha}{2}\lVert W \rVe
 <span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>n_nodes <span class="op">=</span> k<span class="op">*</span>k </span>
 <span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>n_rbf_centers <span class="op">=</span> m<span class="op">*</span>m </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="204">
+<div class="cell-output cell-output-display" data-execution_count="4">
 <pre><code>25</code></pre>
 </div>
 </div>
-<div class="cell" data-execution_count="205">
+<div class="cell" data-execution_count="5">
 <div class="sourceCode cell-code" id="cb8"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 2. Create node matrix X</span></span>
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> <span class="fu">range</span>(<span class="op">-</span><span class="fl">1.0</span>, <span class="fl">1.0</span>, length<span class="op">=</span>k) </span>
@@ -477,11 +477,11 @@ p(W) = \left(\frac{\alpha}{2\pi}\right)^{W/2}\exp(-\frac{\alpha}{2}\lVert W \rVe
 <span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a><span class="fu">size</span>(X,<span class="fl">1</span>) <span class="op">==</span> n_nodes</span>
 <span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>p <span class="op">=</span> <span class="fu">scatter</span>(X[<span class="op">:</span>,<span class="fl">1</span>], X[<span class="op">:</span>,<span class="fl">2</span>], color<span class="op">=:</span>black, label<span class="op">=</span><span class="st">"node locations"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="205">
+<div class="cell-output cell-output-display" data-execution_count="5">
 <p><img src="generative_topographic_mapping_files/figure-html/cell-6-output-1.svg" class="img-fluid"></p>
 </div>
 </div>
-<div class="cell" data-execution_count="206">
+<div class="cell" data-execution_count="6">
 <div class="sourceCode cell-code" id="cb9"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 3. Create rbf centers matrix M</span></span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> <span class="fu">range</span>(<span class="op">-</span><span class="fl">1.0</span>, <span class="fl">1.0</span>, length<span class="op">=</span>m) </span>
@@ -493,21 +493,21 @@ p(W) = \left(\frac{\alpha}{2\pi}\right)^{W/2}\exp(-\frac{\alpha}{2}\lVert W \rVe
 <span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a><span class="fu">size</span>(M,<span class="fl">1</span>) <span class="op">==</span> n_rbf_centers</span>
 <span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a><span class="fu">scatter!</span>(M[<span class="op">:</span>,<span class="fl">1</span>], M[<span class="op">:</span>,<span class="fl">2</span>], color<span class="op">=:</span>purple, label<span class="op">=</span><span class="st">"rbf centers"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="206">
+<div class="cell-output cell-output-display" data-execution_count="6">
 <p><img src="generative_topographic_mapping_files/figure-html/cell-7-output-1.svg" class="img-fluid"></p>
 </div>
 </div>
-<div class="cell" data-execution_count="207">
+<div class="cell" data-execution_count="7">
 <div class="sourceCode cell-code" id="cb10"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 4. Initialize rbf width</span></span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="co"># initialize the rbf variance to the mean squared distance between rbf centers</span></span>
 <span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="im">using</span> <span class="bu">Distances</span></span>
 <span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>σ <span class="op">=</span> <span class="fu">mean</span>(<span class="fu">sqeuclidean</span>(M[<span class="op">:</span>,<span class="fl">1</span>], M[<span class="op">:</span>,<span class="fl">2</span>]))  <span class="co"># sqeuclidean is Squared Euclidean distance</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="207">
+<div class="cell-output cell-output-display" data-execution_count="7">
 <pre><code>25.0</code></pre>
 </div>
 </div>
-<div class="cell" data-execution_count="208">
+<div class="cell" data-execution_count="8">
 <div class="sourceCode cell-code" id="cb12"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 5. Create rbf matrix Φ</span></span>
 <span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="co"># this matrix contains the RBF basis functions applied to each latent point *plus* one constant row to enable fitting a bias. </span></span>
@@ -520,7 +520,7 @@ p(W) = \left(\frac{\alpha}{2\pi}\right)^{W/2}\exp(-\frac{\alpha}{2}\lVert W \rVe
 <span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>Φ[<span class="op">:</span>,<span class="kw">end</span>] <span class="op">.=</span> <span class="fl">1</span></span>
 <span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>Φ</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="208">
+<div class="cell-output cell-output-display" data-execution_count="8">
 <pre><code>100×26 Matrix{Float64}:
  1.0       0.995012  0.980199  0.955997  …  0.904837  0.882497  0.852144  1.0
  0.999013  0.998458  0.987974  0.967873     0.912015  0.893459  0.866572  1.0
@@ -550,45 +550,45 @@ p(W) = \left(\frac{\alpha}{2\pi}\right)^{W/2}\exp(-\frac{\alpha}{2}\lVert W \rVe
  0.852144  0.882497  0.904837  0.918512     0.980199  0.995012  1.0       1.0</code></pre>
 </div>
 </div>
-<div class="cell" data-execution_count="209">
+<div class="cell" data-execution_count="9">
 <div class="sourceCode cell-code" id="cb14"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 6. perform PCA on data to set up linear basis functions. </span></span>
 <span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="im">using</span> <span class="bu">MultivariateStats</span></span>
 <span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a><span class="co"># dataset has rows as our records. PCA wants them as the columns</span></span>
 <span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a><span class="fu">size</span>(𝒟)</span>
 <span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>pca <span class="op">=</span> <span class="fu">fit</span>(PCA, 𝒟<span class="ch">'; maxoutdim=3)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="209">
-<pre><code>PCA(indim = 10, outdim = 3, principalratio = 0.8484339613384994)
+<div class="cell-output cell-output-display" data-execution_count="9">
+<pre><code>PCA(indim = 10, outdim = 3, principalratio = 0.870371001924444)
 
 Pattern matrix (unstandardized loadings):
-────────────────────────────────────
-          PC1         PC2        PC3
-────────────────────────────────────
-1   -2.20938    3.09024    -1.06725
-2    2.85454    0.0343929   3.82253
-3    4.77197    3.32616    -1.42665
-4   -1.58227   -2.00701     3.29562
-5    0.93737    1.8949      0.485669
-6   -0.403139   2.87226     0.212774
-7   -2.81815    1.4322     -2.90989
-8   -3.9994     3.46003     1.99449
-9    2.2626    -2.07305    -2.75982
-10   3.05605    3.1504      1.44111
-────────────────────────────────────
+───────────────────────────────────
+          PC1        PC2        PC3
+───────────────────────────────────
+1   -2.23544   -4.60112    3.2542
+2   -3.05877    2.30219   -0.892043
+3    7.49359   -2.10196    1.88858
+4    1.4984     4.03441    2.76862
+5    0.72444   -0.584785  -4.10281
+6    0.645328   6.18586    1.02383
+7   -2.00928    1.46296    1.18199
+8    0.361678  -0.608499  -3.2941
+9   -4.24339   -0.402499   1.49673
+10   1.80407    2.40886   -0.845688
+───────────────────────────────────
 
 Importance of components:
 ──────────────────────────────────────────────────────────
                                  PC1        PC2        PC3
 ──────────────────────────────────────────────────────────
-SS Loadings (Eigenvalues)  77.7422    64.7283    51.0672
-Variance explained          0.340808   0.283757   0.223869
-Cumulative variance         0.340808   0.624565   0.848434
-Proportion explained        0.40169    0.334448   0.263862
-Cumulative proportion       0.40169    0.736138   1.0
+SS Loadings (Eigenvalues)  99.1226    94.247     55.7024
+Variance explained          0.34638    0.329342   0.19465
+Cumulative variance         0.34638    0.675721   0.870371
+Proportion explained        0.397968   0.378392   0.22364
+Cumulative proportion       0.397968   0.77636    1.0
 ──────────────────────────────────────────────────────────</code></pre>
 </div>
 </div>
-<div class="cell" data-execution_count="210">
+<div class="cell" data-execution_count="10">
 <div class="sourceCode cell-code" id="cb16"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 7. Set U matrix to first two principle axes (since latent space is two dimensional)</span></span>
 <span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>pca_vecs <span class="op">=</span> <span class="fu">projection</span>(pca)  <span class="co"># this results the princiap component vectors (columns) sorted in order of explained variance </span></span>
@@ -600,34 +600,31 @@ Cumulative proportion       0.40169    0.736138   1.0
 <span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i <span class="op">∈</span> <span class="fu">axes</span>(U,<span class="fl">2</span>)</span>
 <span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a>    U[<span class="op">:</span>,i] <span class="op">.=</span> <span class="fu">sqrt</span>(pca_var[i])<span class="op">.*</span>U[<span class="op">:</span>,i]  <span class="co"># we still need to figure out why they're scaling by the explained variance...</span></span>
 <span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a><span class="cf">end</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="210">
-<pre><code>51.067161215523726</code></pre>
 </div>
-</div>
-<div class="cell" data-execution_count="211">
-<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>U</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="211">
+<div class="cell" data-execution_count="11">
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>U</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="11">
 <pre><code>10×2 Matrix{Float64}:
- -2.20938    3.09024
-  2.85454    0.0343929
-  4.77197    3.32616
- -1.58227   -2.00701
-  0.93737    1.8949
- -0.403139   2.87226
- -2.81815    1.4322
- -3.9994     3.46003
-  2.2626    -2.07305
-  3.05605    3.1504</code></pre>
+ -2.23544   -4.60112
+ -3.05877    2.30219
+  7.49359   -2.10196
+  1.4984     4.03441
+  0.72444   -0.584785
+  0.645328   6.18586
+ -2.00928    1.46296
+  0.361678  -0.608499
+ -4.24339   -0.402499
+  1.80407    2.40886</code></pre>
 </div>
 </div>
-<div class="cell" data-execution_count="293">
-<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 8. Initialize parameter matrix W using Φ, and U</span></span>
-<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">Init_W_Matrix</span>(X,Φ,U)</span>
-<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>    <span class="co"># We want to find W such that WΦ' = UX'</span></span>
-<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>    <span class="co"># therefore, W' is the solution to Φ'⋅Φ⋅W' = Φ'UX'</span></span>
-<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> ((Φ<span class="ch">'*Φ)\(Φ'</span><span class="op">*</span>X<span class="op">*</span>U<span class="op">'</span>))<span class="ch">'</span></span>
-<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a><span class="kw">end</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="293">
+<div class="cell" data-execution_count="12">
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 8. Initialize parameter matrix W using Φ, and U</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">Init_W_Matrix</span>(X,Φ,U)</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>    <span class="co"># We want to find W such that WΦ' = UX'</span></span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>    <span class="co"># therefore, W' is the solution to Φ'⋅Φ⋅W' = Φ'UX'</span></span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> ((Φ<span class="ch">'*Φ)\(Φ'</span><span class="op">*</span>X<span class="op">*</span>U<span class="op">'</span>))<span class="ch">'</span></span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a><span class="kw">end</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="12">
 <pre><code>Init_W_Matrix (generic function with 1 method)</code></pre>
 </div>
 </div>
@@ -644,63 +641,805 @@ Note
 <p>I have done this differently thant than <code>ugtm.py</code>. They standardize the vectors first. I think they also have a typo in how they solve for W (they leave <code>UX'</code> out until the end. See <a href="https://github.com/hagax8/ugtm/blob/master/ugtm/ugtm_core.py#L145">this link</a>. Maybe this is just an approximation to speed things up.</p>
 </div>
 </div>
-<div class="cell" data-execution_count="294">
-<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>W <span class="op">=</span> <span class="fu">Init_W_Matrix</span>(X,Φ,U)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="294">
+<div class="cell" data-execution_count="13">
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>W <span class="op">=</span> <span class="fu">Init_W_Matrix</span>(X,Φ,U)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="13">
 <pre><code>10×26 adjoint(::Matrix{Float64}) with eltype Float64:
-    -66.1707    -8869.24         2221.28  …     715.413    4175.36   -4.76914
-   9797.21     -52907.3         13479.9      -21922.4     36418.9   -24.4541
-  24260.6     -140689.0         35804.9      -53691.1     94819.9   -65.7297
- -10224.7       61100.5        -15542.9       22517.1    -40827.9    28.6682
-   7759.74     -47480.4         12074.0      -17020.5     31517.0   -22.3505
-   5554.78     -38514.0          9777.24  …  -11905.8     24729.9   -18.4196
-  -6136.49      28798.5         -7355.45      13998.0    -20731.3    12.9958
-  -5266.11      18053.3         -4642.94      12422.1    -14599.1     7.59055
-   2700.4       -8365.46         2157.29      -6424.78     7058.78   -3.41529
-  17997.5          -1.06408e5   27072.5      -39704.9     71318.4   -49.8515</code></pre>
+ -18703.4         1.14544e5  -29127.3    …   41018.6    -76014.3    53.9257
+  -4857.21    19306.1         -4947.7        11294.4    -14737.6     8.42081
+  20432.1        -1.03849e5   26486.0       -46118.4     72842.0   -47.5287
+  14828.5    -91966.7         23382.0       -32449.5     60818.9   -43.3706
+   1055.05    -3940.59         1011.32       -2468.83     3079.99   -1.69384
+  17114.0        -1.10708e5   28130.3    …  -37170.1     72381.1   -52.4975
+  -3309.64    13470.6         -3450.43        7676.45   -10193.3     5.90667
+   -236.655    3092.17         -780.273        417.986   -1749.06    1.56091
+ -15411.2     84264.3        -21464.8        34420.5    -57786.0    39.023
+  11948.5    -71591.5         18210.9       -26301.9     47802.2   -33.603</code></pre>
 </div>
 </div>
-<div class="cell" data-execution_count="295">
-<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>W2 <span class="op">=</span> U<span class="op">*</span>X<span class="op">'</span><span class="fu">*</span>((Φ<span class="ch">'*Φ)\ Φ'</span>)<span class="ch">'  # this is how they do it... </span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="295">
+<div class="cell" data-execution_count="14">
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>W2 <span class="op">=</span> U<span class="op">*</span>X<span class="op">'</span><span class="fu">*</span>((Φ<span class="ch">'*Φ)\ Φ'</span>)<span class="ch">'  # this is how they do it... </span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="14">
 <pre><code>10×26 Matrix{Float64}:
-    -68.1991   -8854.08         2215.59  …     720.702    4165.11   -4.76126
-   9797.54    -52909.4         13481.4      -21923.0     36420.0   -24.4549
-  24259.6         -1.4068e5    35803.1      -53687.7     94813.2   -65.7244
- -10223.9      61093.7        -15540.9       22514.6    -40822.9    28.6643
-   7758.81    -47473.1         12071.7      -17017.8     31511.8   -22.3465
-   5553.24    -38502.0          9773.03  …  -11901.6     24721.6   -18.4132
-  -6137.65     28806.9         -7359.05      14000.9    -20736.8    13.0
-  -5268.47     18070.9         -4649.99      12428.2    -14610.8     7.59956
-   2701.87     -8376.29         2161.54      -6428.52     7066.03   -3.42083
-  17996.2         -1.06397e5   27069.7      -39700.9     71310.5   -49.8453</code></pre>
+ -18701.3         1.14527e5  -29122.1    …   41012.4    -76002.2    53.9162
+  -4858.91    19318.5         -4952.73       11298.6    -14745.9     8.42715
+  20434.3        -1.03864e5   26493.2       -46123.5     72851.8   -47.5361
+  14826.6    -91951.7         23377.3       -32444.1     60808.2   -43.3623
+   1055.47    -3943.7          1012.56       -2469.9      3082.06   -1.69543
+  17110.7        -1.10683e5   28121.9    …  -37161.0     72363.3   -52.4838
+  -3310.72    13478.5         -3453.63        7679.15   -10198.5     5.91067
+   -236.264    3089.25         -779.192        416.963   -1747.07    1.55938
+ -15411.6     84266.7        -21466.7        34421.1    -57787.1    39.0238
+  11947.6    -71583.4         18208.5       -26298.8     47796.3   -33.5984</code></pre>
 </div>
 </div>
-<div class="cell" data-execution_count="297">
-<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 9. Initialize Y using W and Φ</span></span>
-<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>Y <span class="op">=</span> W<span class="op">*</span>Φ<span class="ch">'</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="297">
+<div class="cell" data-execution_count="15">
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 9. Initialize Y using W and Φ</span></span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>Y <span class="op">=</span> W<span class="op">*</span>Φ<span class="ch">'</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="15">
 <pre><code>10×100 Matrix{Float64}:
- -0.880747  -1.37201   -1.86323   …   1.86237    1.37159    0.880852
- -2.88449   -2.25557   -1.62405       1.61677    2.25385    2.89299
- -8.08698   -7.04031   -5.98714       5.96816    7.03559    8.10819
-  3.58456    3.2388     2.8903       -2.88213   -3.23673   -3.59353
- -2.82867   -2.62485   -2.41895       2.41263    2.62323    2.83549
- -2.46647   -2.55942   -2.65086   …   2.64589    2.55805    2.47143
-  1.38324    0.760232   0.135613     -0.131485  -0.759356  -1.38849
-  0.537158  -0.349048  -1.2366        1.23948    0.349488  -0.541541
- -0.188432   0.313092   0.815299     -0.816688  -0.313276   0.190664
- -6.19814   -5.5293    -4.85563       4.84135    5.52571    6.21391</code></pre>
+  6.82787    6.34193     5.85095   …  -5.83571   -6.33801    -6.84432
+  0.754489   0.0772084  -0.601325      0.604246  -0.0766779  -0.758579
+ -5.38248   -3.72831    -2.06876       2.05423    3.72502     5.40008
+ -5.5259    -5.20154    -4.87318       4.86099    5.19838     5.53897
+ -0.139206   0.0212586   0.181994     -0.182603  -0.021362    0.14009
+ -6.82314   -6.68984    -6.5519    …   6.53737    6.68598     6.8383
+  0.544894   0.100064   -0.345621      0.347642  -0.0996882  -0.547687
+  0.246684   0.327252    0.407746     -0.40739   -0.327125   -0.246921
+  4.63889    3.70448     2.76597      -2.75442   -3.70172    -4.65227
+ -4.2074    -3.81336    -3.4161        3.40653    3.81093     4.21789</code></pre>
 </div>
 </div>
-<div class="cell" data-execution_count="303">
-<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 10. Set noise varaiance parameter</span></span>
-<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>β⁻¹ <span class="op">=</span> <span class="fu">maximum</span>([<span class="fu">mean</span>(<span class="fu">pairwise</span>(sqeuclidean, Y, dims<span class="op">=</span><span class="fl">2</span>))<span class="op">/</span><span class="fl">2</span>, pca_var[<span class="kw">end</span>]])</span>
-<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb28-5"><a href="#cb28-5" aria-hidden="true" tabindex="-1"></a><span class="co">#  β⁻¹ = pca_var[end]</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="303">
-<pre><code>58.04360187458589</code></pre>
+<div class="cell" data-execution_count="16">
+<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 10. Set noise varaiance parameter</span></span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a>β⁻¹ <span class="op">=</span> <span class="fu">maximum</span>([<span class="fu">mean</span>(<span class="fu">pairwise</span>(sqeuclidean, Y, dims<span class="op">=</span><span class="fl">2</span>))<span class="op">/</span><span class="fl">2</span>, pca_var[<span class="kw">end</span>]])</span>
+<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-5"><a href="#cb27-5" aria-hidden="true" tabindex="-1"></a><span class="co">#  β⁻¹ = pca_var[end]</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="16">
+<pre><code>78.78030347169494</code></pre>
+</div>
+</div>
+<p>We now have everything we need to begin the EM algorithm. The Procedure is as follows:</p>
+<ol type="1">
+<li>Create distance matrix between projections <code>Y</code> and the data <code>T</code>.</li>
+<li>Continue until convergence:
+<ol type="1">
+<li>Update data distribution <code>P</code></li>
+<li>Update responsabilities <code>R</code></li>
+<li>Update diagonal matrix <code>G</code></li>
+<li>Update parameter matrix <code>W</code></li>
+<li>Update manifold matrix <code>Y</code></li>
+<li>Update distance matrix <code>D</code></li>
+<li>Update variance <code>β⁻¹</code></li>
+<li>Estimate log-likelihood</li>
+<li>Check for convergence.</li>
+</ol></li>
+<li>Compute represenation 1: <code>means</code></li>
+<li>Compute representation 2: <code>modes</code></li>
+</ol>
+<div class="cell" data-execution_count="17">
+<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a><span class="fu">println</span>(<span class="fu">size</span>(𝒟))</span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a><span class="fu">println</span>(<span class="fu">size</span>(Y))</span>
+<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a>D <span class="op">=</span> <span class="fu">pairwise</span>(sqeuclidean, Y, 𝒟<span class="ch">')'</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>(500, 10)
+(10, 100)</code></pre>
+</div>
+<div class="cell-output cell-output-display" data-execution_count="17">
+<pre><code>500×100 adjoint(::Matrix{Float64}) with eltype Float64:
+ 603.094   517.11   440.435  373.217  …  538.835  510.758  492.637   484.559
+ 913.456   838.553  772.75   716.206     146.954  129.437  121.697   123.832
+ 328.496   273.408  227.8    191.804     584.487  587.708  601.027   624.525
+ 109.075   133.796  168.263  212.576     662.189  745.829  839.779   944.119
+ 501.067   498.385  505.135  521.439     276.184  331.661  397.186   472.849
+ 843.339   776.729  719.268  671.107  …  166.999  157.887  158.591   169.208
+ 102.16    123.413  154.404  195.232     650.326  730.478  820.934   921.773
+ 115.916   147.906  189.681  241.337     740.939  831.939  933.283  1045.05
+ 500.948   497.538  503.546  519.094     236.155  290.869  355.618   430.493
+ 509.347   508.938  517.963  536.543     276.65   334.405  402.208   480.151
+ 865.257   795.452  734.771  683.37   …  139.153  126.791  124.224   131.553
+  94.9527  124.308  163.449  212.471     737.56   825.928  924.64   1033.77
+ 116.789   137.469  167.891  208.157     687.106  766.7    856.602   956.892
+   ⋮                                  ⋱                             
+ 824.519   754.634  693.886  642.431     138.625  126.214  123.611   130.914
+ 249.207   202.414  165.122  137.46      517.414  528.978  550.657   582.531
+ 101.427   127.428  163.202  208.846  …  728.035  813.02   908.339  1014.07
+ 572.532   563.767  564.398  574.551     279.304  328.614  387.943   457.382
+ 520.289   513.576  516.278  528.519     271.71   323.118  384.56    456.128
+ 666.184   569.611  482.304  404.414     537.561  498.793  469.946   451.108
+ 137.324   168.15   208.738  259.187     702.991  792.773  892.881  1003.39
+ 663.076   572.22   490.677  418.597  …  642.398  609.461  586.486   573.557
+ 278.896   232.346  195.31   167.917     584.434  596.273  618.238   650.408
+ 114.491   142.244  179.758  227.129     690.446  777.151  874.178   981.605
+ 130.429   159.524  198.393  247.131     737.256  825.334  923.745  1032.57
+ 813.759   745.036  685.463  635.191     153.891  142.67   141.266   149.776</code></pre>
+</div>
+</div>
+<p>In this next step, we need to be able to compute the probabilities <span class="math display">\begin{equation}
+    p(\mathbf{t}_n\vert \mathbf{x}_k, W, \beta) \propto \exp\left(-\frac{\beta}{2}\lVert \mathbf{y}(\mathbf{x}_k,W) - \mathbf{t}_n \rVert^2 \right)
+\end{equation}</span></p>
+<p>when we use these probabilitieis to compute the responsabilities: <span class="math display">\begin{equation}
+    r_{kn} = \frac{p(\mathbf{t}_n\vert \mathbf{x}_k, W, \beta)}{\sum_{k'}p(\mathbf{t}_n \vert \mathbf{x}_{k'}, W, \beta)}
+\end{equation}</span> we can run into numerical overflow (i.e.&nbsp;exponentiating large numbers can easily blow up to larger than we can represent with a <code>Float64</code>). To avoid this trick, we take advantage of <a href="https://timvieira.github.io/blog/post/2014/02/11/exp-normalize-trick/">this cool trick</a>: <span class="math display">\begin{equation}
+    \pi_i := \frac{\exp(x_i)}{\sum_j \exp(x_j)} = \frac{\exp(x_i-b)\exp(b))}{\sum_j\exp(x_j-b)\exp(b)} = \frac{\exp(x_i-b)}{\sum_j \exp(x_j-b)}.
+\end{equation}</span> Choosing <span class="math inline">b=\max\{x_i\}_{i=1}^{n}</span> means well never exponentiate anything larger than <span class="math inline">0</span>!</p>
+<div class="cell" data-execution_count="18">
+<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 1. Update distribution `P`</span></span>
+<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">Posterior</span>(β⁻¹, D)</span>
+<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a>    inner <span class="op">=</span> <span class="op">-</span> D<span class="op">'</span> <span class="op">./</span> (<span class="fl">2</span><span class="op">*</span>β⁻¹)</span>
+<span id="cb32-5"><a href="#cb32-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">exp</span>.(inner <span class="op">.-</span> <span class="fu">maximum</span>(inner))</span>
+<span id="cb32-6"><a href="#cb32-6" aria-hidden="true" tabindex="-1"></a><span class="kw">end</span></span>
+<span id="cb32-7"><a href="#cb32-7" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb32-8"><a href="#cb32-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-9"><a href="#cb32-9" aria-hidden="true" tabindex="-1"></a>Ptest <span class="op">=</span> <span class="fu">Posterior</span>(β⁻¹, D)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="18">
+<pre><code>100×500 Matrix{Float64}:
+ 0.0336957   0.00470005  0.192516   …  0.748761    0.676722    0.00884923
+ 0.0581538   0.00756072  0.273092      0.627834    0.562618    0.0136877
+ 0.0946067   0.0114799   0.364771      0.494816    0.439621    0.0199773
+ 0.144944    0.0164361   0.458395      0.366329    0.322655    0.0274855
+ 0.208926    0.0221626   0.541549      0.254654    0.222344    0.0356072
+ 0.283085    0.0281092   0.601127   …  0.166207    0.143851    0.043383
+ 0.360304    0.033492    0.626766      0.101892    0.0874167   0.0496546
+ 0.430606    0.0374479   0.613933      0.0587312   0.0499489   0.0533403
+ 0.483254    0.0392629   0.565358      0.0318864   0.0268848   0.053748
+ 0.509604    0.0385909   0.490148      0.0163503   0.0136689   0.0507987
+ 0.0342877   0.00821162  0.178365   …  0.787785    0.700696    0.0147263
+ 0.0592901   0.0132493   0.253306      0.660479    0.582446    0.0228413
+ 0.0965259   0.0201426   0.338457      0.520402    0.454975    0.0333754
+ ⋮                                  ⋱                          
+ 0.106904    0.656263    0.0589926     0.0091741   0.00680563  0.608445
+ 0.11263     0.647508    0.0508977     0.00465121  0.00342018  0.576628
+ 0.00471022  0.0848936   0.0115907  …  0.141768    0.110969    0.103196
+ 0.00818107  0.138307    0.0164701     0.118221    0.0917197   0.161441
+ 0.0133375   0.210938    0.022007      0.0929473   0.0714841   0.236556
+ 0.02043     0.301801    0.0276587     0.0688514   0.0524964   0.325273
+ 0.0294177   0.405663    0.0326933     0.0480038   0.0362871   0.420245
+ 0.0398223   0.512674    0.0363277  …  0.0314607   0.0235778   0.510481
+ 0.0506634   0.609344    0.0379195     0.0193553   0.0143805   0.583097
+ 0.0605463   0.680999    0.0371521     0.0111637   0.00822244  0.626139
+ 0.0679258   0.715289    0.0341406     0.00603071  0.00440295  0.631744
+ 0.071499    0.70566     0.0294105     0.00304972  0.00220695  0.598529</code></pre>
+</div>
+</div>
+<div class="cell" data-execution_count="19">
+<div class="sourceCode cell-code" id="cb34"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sum</span>(Ptest, dims<span class="op">=</span><span class="fl">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="19">
+<pre><code>1×500 Matrix{Float64}:
+ 16.6721  20.8193  23.1625  22.1693  …  24.228  20.3408  17.1458  22.7755</code></pre>
+</div>
+</div>
+<div class="cell" data-execution_count="20">
+<div class="sourceCode cell-code" id="cb36"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 2. Update responsabilities R</span></span>
+<span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb36-3"><a href="#cb36-3" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">Responsabilities</span>(P)</span>
+<span id="cb36-4"><a href="#cb36-4" aria-hidden="true" tabindex="-1"></a>    <span class="co"># sum along rows since each column is a new data point</span></span>
+<span id="cb36-5"><a href="#cb36-5" aria-hidden="true" tabindex="-1"></a>    Σs <span class="op">=</span> <span class="fu">sum</span>(P, dims<span class="op">=</span><span class="fl">1</span>)</span>
+<span id="cb36-6"><a href="#cb36-6" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb36-7"><a href="#cb36-7" aria-hidden="true" tabindex="-1"></a>    R <span class="op">=</span> P</span>
+<span id="cb36-8"><a href="#cb36-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> j <span class="op">∈</span> <span class="fu">axes</span>(R,<span class="fl">2</span>)</span>
+<span id="cb36-9"><a href="#cb36-9" aria-hidden="true" tabindex="-1"></a>        R[<span class="op">:</span>,j] <span class="op">.=</span> (R[<span class="op">:</span>,j] <span class="op">./</span> Σs[j])</span>
+<span id="cb36-10"><a href="#cb36-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">end</span></span>
+<span id="cb36-11"><a href="#cb36-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> R</span>
+<span id="cb36-12"><a href="#cb36-12" aria-hidden="true" tabindex="-1"></a><span class="kw">end</span></span>
+<span id="cb36-13"><a href="#cb36-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb36-14"><a href="#cb36-14" aria-hidden="true" tabindex="-1"></a>testR <span class="op">=</span> <span class="fu">Responsabilities</span>(Ptest)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="20">
+<pre><code>100×500 Matrix{Float64}:
+ 0.00202108   0.000225755  0.00831154   …  0.0394686    0.000388541
+ 0.00348809   0.000363159  0.0117903       0.0328137    0.000600981
+ 0.00567455   0.000551408  0.0157483       0.0256401    0.000877137
+ 0.00869378   0.000789462  0.0197903       0.0188183    0.0012068
+ 0.0125315    0.00106452   0.0233804       0.0129678    0.00156339
+ 0.0169796    0.00135015   0.0259526    …  0.00838987   0.00190481
+ 0.0216112    0.0016087    0.0270595       0.00509842   0.00218017
+ 0.0258279    0.00179871   0.0265054       0.00291318   0.002342
+ 0.0289858    0.00188589   0.0244083       0.00156801   0.0023599
+ 0.0305663    0.00185361   0.0211612       0.000797212  0.00223041
+ 0.00205659   0.000394423  0.00770059   …  0.0408669    0.000646584
+ 0.00355625   0.000636395  0.010936        0.0339701    0.00100289
+ 0.00578967   0.000967498  0.0146123       0.0265356    0.0014654
+ ⋮                                      ⋱               
+ 0.00641213   0.0315219    0.0025469       0.000396926  0.0267148
+ 0.0067556    0.0311013    0.00219742      0.000199476  0.0253178
+ 0.000282521  0.00407764   0.000500406  …  0.00647208   0.00453102
+ 0.000490704  0.00664321   0.000711067     0.00534938   0.00708834
+ 0.00079999   0.0101318    0.000950111     0.00416918   0.0103864
+ 0.0012254    0.0144962    0.00119411      0.00306176   0.0142817
+ 0.00176449   0.0194849    0.00141147      0.00211638   0.0184516
+ 0.00238856   0.024625     0.00156838   …  0.00137513   0.0224136
+ 0.00303881   0.0292682    0.00163711      0.000838718  0.0256019
+ 0.00363159   0.03271      0.00160397      0.000479559  0.0274917
+ 0.00407422   0.034357     0.00147396      0.000256794  0.0277378
+ 0.00428854   0.0338945    0.00126975      0.000128716  0.0262794</code></pre>
+</div>
+</div>
+<div class="cell" data-execution_count="21">
+<div class="sourceCode cell-code" id="cb38"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a><span class="fu">println</span>(<span class="fu">sum</span>(testR[<span class="op">:</span>,<span class="fl">1</span>]))</span>
+<span id="cb38-2"><a href="#cb38-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb38-3"><a href="#cb38-3" aria-hidden="true" tabindex="-1"></a><span class="fu">scatter</span>(X[<span class="op">:</span>,<span class="fl">1</span>], X[<span class="op">:</span>,<span class="fl">2</span>],</span>
+<span id="cb38-4"><a href="#cb38-4" aria-hidden="true" tabindex="-1"></a>    zcolor<span class="op">=</span>testR[<span class="op">:</span>,<span class="fl">1</span>],</span>
+<span id="cb38-5"><a href="#cb38-5" aria-hidden="true" tabindex="-1"></a>    label<span class="op">=</span><span class="st">""</span>,</span>
+<span id="cb38-6"><a href="#cb38-6" aria-hidden="true" tabindex="-1"></a>    xlabel<span class="op">=</span><span class="st">"x₁"</span>,</span>
+<span id="cb38-7"><a href="#cb38-7" aria-hidden="true" tabindex="-1"></a>    ylabel<span class="op">=</span><span class="st">"x₂"</span>,</span>
+<span id="cb38-8"><a href="#cb38-8" aria-hidden="true" tabindex="-1"></a>    title<span class="op">=</span><span class="st">"Responsability matrix for first data point"</span></span>
+<span id="cb38-9"><a href="#cb38-9" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>0.9999999999999999</code></pre>
+</div>
+<div class="cell-output cell-output-display" data-execution_count="21">
+<p><img src="generative_topographic_mapping_files/figure-html/cell-22-output-2.svg" class="img-fluid"></p>
+</div>
+</div>
+<div class="cell" data-execution_count="22">
+<div class="sourceCode cell-code" id="cb40"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a>Σs <span class="op">=</span> <span class="fu">sum</span>(testR, dims<span class="op">=</span><span class="fl">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="22">
+<pre><code>100×1 Matrix{Float64}:
+ 5.270988586108698
+ 5.203487543373579
+ 5.159892266167381
+ 5.19336128556256
+ 5.319755065033108
+ 5.513619817151002
+ 5.716815257119075
+ 5.855947301654589
+ 5.862742798211288
+ 5.691700866974154
+ 5.484404832180334
+ 5.384138243422857
+ 5.298448885604486
+ ⋮
+ 4.553882482951323
+ 4.2438179154570355
+ 3.706214494565581
+ 4.0302129678379375
+ 4.279109557883407
+ 4.462821610105696
+ 4.592327324580734
+ 4.669781298038044
+ 4.682743830970214
+ 4.60608261326271
+ 4.411794455081603
+ 4.082992869010511</code></pre>
+</div>
+</div>
+<p>While the GTM model is not yet fit, we can clearly see the nice smoothness properties of the GTM activations for each latent node at play.</p>
+<p>Next we need to construct a function for generating the diagonal matrix <code>G</code> from our responsabilities.</p>
+<div class="cell" data-execution_count="23">
+<div class="sourceCode cell-code" id="cb42"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 3. Update diagonal matrix `G`</span></span>
+<span id="cb42-2"><a href="#cb42-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb42-3"><a href="#cb42-3" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">GetGMatrix</span>(R)</span>
+<span id="cb42-4"><a href="#cb42-4" aria-hidden="true" tabindex="-1"></a>    <span class="co"># G is determined by the sum over data points at each node</span></span>
+<span id="cb42-5"><a href="#cb42-5" aria-hidden="true" tabindex="-1"></a>    Σs <span class="op">=</span> <span class="fu">vec</span>(<span class="fu">sum</span>(R, dims<span class="op">=</span><span class="fl">2</span>))</span>
+<span id="cb42-6"><a href="#cb42-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="fu">diagm</span>(Σs)</span>
+<span id="cb42-7"><a href="#cb42-7" aria-hidden="true" tabindex="-1"></a><span class="kw">end</span></span>
+<span id="cb42-8"><a href="#cb42-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb42-9"><a href="#cb42-9" aria-hidden="true" tabindex="-1"></a>testG <span class="op">=</span> <span class="fu">GetGMatrix</span>(testR)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="23">
+<pre><code>100×100 Matrix{Float64}:
+ 5.27099  0.0      0.0      0.0      …  0.0      0.0      0.0      0.0
+ 0.0      5.20349  0.0      0.0         0.0      0.0      0.0      0.0
+ 0.0      0.0      5.15989  0.0         0.0      0.0      0.0      0.0
+ 0.0      0.0      0.0      5.19336     0.0      0.0      0.0      0.0
+ 0.0      0.0      0.0      0.0         0.0      0.0      0.0      0.0
+ 0.0      0.0      0.0      0.0      …  0.0      0.0      0.0      0.0
+ 0.0      0.0      0.0      0.0         0.0      0.0      0.0      0.0
+ 0.0      0.0      0.0      0.0         0.0      0.0      0.0      0.0
+ 0.0      0.0      0.0      0.0         0.0      0.0      0.0      0.0
+ 0.0      0.0      0.0      0.0         0.0      0.0      0.0      0.0
+ 0.0      0.0      0.0      0.0      …  0.0      0.0      0.0      0.0
+ 0.0      0.0      0.0      0.0         0.0      0.0      0.0      0.0
+ 0.0      0.0      0.0      0.0         0.0      0.0      0.0      0.0
+ ⋮                                   ⋱                             
+ 0.0      0.0      0.0      0.0         0.0      0.0      0.0      0.0
+ 0.0      0.0      0.0      0.0         0.0      0.0      0.0      0.0
+ 0.0      0.0      0.0      0.0      …  0.0      0.0      0.0      0.0
+ 0.0      0.0      0.0      0.0         0.0      0.0      0.0      0.0
+ 0.0      0.0      0.0      0.0         0.0      0.0      0.0      0.0
+ 0.0      0.0      0.0      0.0         0.0      0.0      0.0      0.0
+ 0.0      0.0      0.0      0.0         0.0      0.0      0.0      0.0
+ 0.0      0.0      0.0      0.0      …  0.0      0.0      0.0      0.0
+ 0.0      0.0      0.0      0.0         4.68274  0.0      0.0      0.0
+ 0.0      0.0      0.0      0.0         0.0      4.60608  0.0      0.0
+ 0.0      0.0      0.0      0.0         0.0      0.0      4.41179  0.0
+ 0.0      0.0      0.0      0.0         0.0      0.0      0.0      4.08299</code></pre>
+</div>
+</div>
+<div class="cell" data-execution_count="24">
+<div class="sourceCode cell-code" id="cb44"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a><span class="fu">println</span>(<span class="fu">size</span>(Φ))</span>
+<span id="cb44-2"><a href="#cb44-2" aria-hidden="true" tabindex="-1"></a><span class="fu">println</span>(<span class="fu">size</span>(testG))</span>
+<span id="cb44-3"><a href="#cb44-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb44-4"><a href="#cb44-4" aria-hidden="true" tabindex="-1"></a>Φ<span class="ch">'*testG*Φ</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>(100, 26)
+(100, 100)</code></pre>
+</div>
+<div class="cell-output cell-output-display" data-execution_count="24">
+<pre><code>26×26 Matrix{Float64}:
+ 449.469  456.127  458.351  456.077  …  455.883  453.619  446.946  473.745
+ 456.127  462.958  465.29   463.055     462.783  460.558  453.856  480.916
+ 458.351  465.29   467.708  465.535     465.187  463.024  456.358  483.415
+ 456.077  463.055  465.535  463.447     463.024  460.945  454.381  481.17
+ 449.369  456.317  458.835  456.849     456.358  454.381  447.983  474.245
+ 455.538  462.286  464.54   462.234  …  462.332  460.036  453.268  480.29
+ 462.286  469.209  471.572  469.306     469.329  467.073  460.275  487.559
+ 464.54   471.572  474.023  471.82      471.767  469.573  462.813  490.093
+ 462.234  469.306  471.82   469.703     469.573  467.464  460.808  487.816
+ 455.436  462.478  465.029  463.016     462.813  460.808  454.318  480.795
+ 457.168  463.94   466.202  463.887  …  464.281  461.975  455.179  482.157
+ 463.94   470.887  473.259  470.984     471.307  469.041  462.214  489.454
+ 466.202  473.259  475.718  473.507     473.755  471.552  464.763  491.997
+ 463.887  470.984  473.507  471.381     471.552  469.433  462.748  489.711
+ 457.064  464.131  466.691  464.67      464.763  462.748  456.231  482.663
+ 454.311  461.04   463.288  460.987  …  461.673  459.379  452.621  479.292
+ 461.04   467.944  470.3    468.039     468.659  466.405  459.617  486.545
+ 463.288  470.3    472.743  470.546     471.093  468.902  462.15   489.073
+ 460.987  468.039  470.546  468.433     468.902  466.795  460.147  486.8
+ 454.207  461.228  463.772  461.763     462.15   460.147  453.666  479.793
+ 447.05   453.672  455.883  453.619  …  454.584  452.325  445.67   471.779
+ 453.672  460.465  462.783  460.558     461.463  459.243  452.559  478.918
+ 455.883  462.783  465.187  463.024     463.859  461.701  455.053  481.406
+ 453.619  460.558  463.024  460.945     461.701  459.626  453.08   479.168
+ 446.946  453.856  456.358  454.381     455.053  453.08   446.698  472.271
+ 473.745  480.916  483.415  481.17   …  481.406  479.168  472.271  500.0</code></pre>
+</div>
+</div>
+<div class="cell" data-execution_count="25">
+<div class="sourceCode cell-code" id="cb47"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a><span class="fu">println</span>(<span class="fu">size</span>(Φ<span class="ch">'))</span></span>
+<span id="cb47-2"><a href="#cb47-2" aria-hidden="true" tabindex="-1"></a><span class="fu">println</span>(<span class="fu">size</span>(testR))</span>
+<span id="cb47-3"><a href="#cb47-3" aria-hidden="true" tabindex="-1"></a><span class="fu">println</span>(<span class="fu">size</span>(𝒟))</span>
+<span id="cb47-4"><a href="#cb47-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb47-5"><a href="#cb47-5" aria-hidden="true" tabindex="-1"></a>Φ<span class="ch">'*testR * 𝒟</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>(26, 100)
+(100, 500)
+(500, 10)</code></pre>
+</div>
+<div class="cell-output cell-output-display" data-execution_count="25">
+<pre><code>26×10 Matrix{Float64}:
+ -261.59   1077.55  753.524  -1589.33  …   -992.69   719.924  589.339
+ -273.021  1082.81  791.65   -1607.99     -1006.69   715.984  604.58
+ -281.953  1077.34  822.58   -1610.93     -1010.88   704.807  614.087
+ -288.123  1061.29  845.404  -1598.08     -1005.14   686.724  617.579
+ -291.349  1035.14  859.447  -1569.8       -989.633  662.267  614.953
+ -281.118  1100.49  756.758  -1597.38  …  -1008.48   728.386  605.618
+ -292.918  1105.95  795.27   -1616.02     -1022.76   724.417  621.211
+ -302.027  1100.44  826.558  -1618.87     -1027.07   713.127  630.911
+ -308.176  1084.13  849.701  -1605.84     -1021.3    694.849  634.431
+ -311.186  1057.51  864.013  -1577.32     -1005.59   670.121  631.667
+ -298.216  1112.87  752.498  -1589.6   …  -1014.5    729.723  616.154
+ -310.273  1118.47  791.018  -1608.03     -1028.92   725.765  631.951
+ -319.471  1112.99  822.358  -1610.75     -1033.32   714.472  641.749
+ -325.539  1096.58  845.594  -1597.67     -1027.56   696.178  645.263
+ -328.297  1069.73  860.038  -1569.18     -1011.82   671.422  642.385
+ -312.379  1114.33  740.869  -1566.2   …  -1010.56   723.895  620.637
+ -324.575  1120.02  779.021  -1584.25     -1024.99   719.987  636.481
+ -333.772  1114.61  810.105  -1586.81     -1029.43   708.803  646.284
+ -339.698  1098.26  833.205  -1573.81     -1023.75   690.672  649.755
+ -342.177  1071.45  847.639  -1545.63     -1008.12   666.131  646.793
+ -323.188  1104.82  722.215  -1527.89  …   -996.802  711.074  618.934
+ -335.402  1110.54  759.63   -1545.38     -1011.08   707.253  634.67
+ -344.507  1105.25  790.158  -1547.76     -1015.52   696.285  644.379
+ -350.235  1089.12  812.899  -1534.97     -1009.97   678.494  647.776
+ -352.417  1062.61  827.18   -1507.37      -994.61   654.404  644.759
+ -324.512  1131.0   834.937  -1637.2   …  -1050.02   726.565  652.542</code></pre>
+</div>
+</div>
+<div class="cell" data-execution_count="26">
+<div class="sourceCode cell-code" id="cb50"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 4. Update parameter matrix W</span></span>
+<span id="cb50-2"><a href="#cb50-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-3"><a href="#cb50-3" aria-hidden="true" tabindex="-1"></a><span class="co"># default regularization parameter to 0.0 unless otherwise specified</span></span>
+<span id="cb50-4"><a href="#cb50-4" aria-hidden="true" tabindex="-1"></a><span class="co"># regularization term is αβ⁻¹I. </span></span>
+<span id="cb50-5"><a href="#cb50-5" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">UpdateW</span>(R, Φ, G, 𝒟, β⁻¹; α<span class="op">=</span><span class="fl">0.0</span>)</span>
+<span id="cb50-6"><a href="#cb50-6" aria-hidden="true" tabindex="-1"></a>    LHS <span class="op">=</span> Φ<span class="ch">'*G*Φ</span></span>
+<span id="cb50-7"><a href="#cb50-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> α <span class="op">&gt;</span> <span class="fl">0</span> </span>
+<span id="cb50-8"><a href="#cb50-8" aria-hidden="true" tabindex="-1"></a>        LHS <span class="op">.=</span> LHS <span class="op">+</span>  α<span class="op">*</span>β⁻¹<span class="op">*</span>I</span>
+<span id="cb50-9"><a href="#cb50-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">end</span></span>
+<span id="cb50-10"><a href="#cb50-10" aria-hidden="true" tabindex="-1"></a>   </span>
+<span id="cb50-11"><a href="#cb50-11" aria-hidden="true" tabindex="-1"></a>    <span class="co"># now we have (LHS)W =  Φ'R𝒟</span></span>
+<span id="cb50-12"><a href="#cb50-12" aria-hidden="true" tabindex="-1"></a>    W_new <span class="op">=</span> <span class="fu">LHS\</span>(Φ<span class="ch">'*R*𝒟)</span></span>
+<span id="cb50-13"><a href="#cb50-13" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> W_new<span class="op">'</span></span>
+<span id="cb50-14"><a href="#cb50-14" aria-hidden="true" tabindex="-1"></a><span class="kw">end</span></span>
+<span id="cb50-15"><a href="#cb50-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-16"><a href="#cb50-16" aria-hidden="true" tabindex="-1"></a>W1 <span class="op">=</span> <span class="fu">UpdateW</span>(testR, Φ, testG, 𝒟, β⁻¹)</span>
+<span id="cb50-17"><a href="#cb50-17" aria-hidden="true" tabindex="-1"></a><span class="co">#W2 = UpdateW(testR, Φ, testG, 𝒟, β⁻¹; α=0.5)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="26">
+<pre><code>10×26 adjoint(::Matrix{Float64}) with eltype Float64:
+     -2.20266e5   -3.12138e5       5.45597e5  …      -4.9478e5   -260.308
+ -42985.6        -84.3087          3.06742e5          3.66509e5   231.078
+      2.65987e5    4.24504e5      -1.20506e6         -4.50353e5  -182.856
+     -7.27478e5   -5.50346e5       2.29158e6     -30563.0         700.014
+ 931010.0          9.52137e5      -2.90023e6          4.07587e5  -403.777
+ -72194.0          3.81287e5  274640.0        …       5.81112e5   837.586
+     -4.48883e5   -4.50589e5       1.49966e6      18804.5         305.99
+      5.74648e5    5.05304e5      -1.75306e6     236804.0        -337.267
+     -4.4513e5    -5.36939e5       1.50089e6     -72687.3         118.802
+     -1.93793e5   -2.08182e5       6.75236e5      66276.1         198.182</code></pre>
+</div>
+</div>
+<div class="cell" data-execution_count="27">
+<div class="sourceCode cell-code" id="cb52"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb52-1"><a href="#cb52-1" aria-hidden="true" tabindex="-1"></a>ND <span class="op">=</span> <span class="fu">size</span>(testR,<span class="fl">1</span>) <span class="op">*</span> <span class="fu">size</span>(testR,<span class="fl">2</span>)</span>
+<span id="cb52-2"><a href="#cb52-2" aria-hidden="true" tabindex="-1"></a>newbetainv <span class="op">=</span> <span class="fu">sum</span>(testR<span class="op">*</span>D)<span class="op">/</span>ND</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="27">
+<pre><code>401.2427310705195</code></pre>
+</div>
+</div>
+<p>Now let’s skip ahead a couple of steps since the next two are just recalculating <code>Y</code> and <code>D</code></p>
+<div class="cell" data-execution_count="28">
+<div class="sourceCode cell-code" id="cb54"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb54-1"><a href="#cb54-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 7. Update β⁻¹</span></span>
+<span id="cb54-2"><a href="#cb54-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb54-3"><a href="#cb54-3" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">UpdateBeta</span>(R, D)</span>
+<span id="cb54-4"><a href="#cb54-4" aria-hidden="true" tabindex="-1"></a>    ND <span class="op">=</span> <span class="fu">size</span>(R,<span class="fl">1</span>)<span class="fu">*size</span>(R,<span class="fl">2</span>)</span>
+<span id="cb54-5"><a href="#cb54-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="fu">sum</span>(R<span class="op">*</span>D)<span class="op">/</span>ND</span>
+<span id="cb54-6"><a href="#cb54-6" aria-hidden="true" tabindex="-1"></a><span class="kw">end</span></span>
+<span id="cb54-7"><a href="#cb54-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb54-8"><a href="#cb54-8" aria-hidden="true" tabindex="-1"></a><span class="fu">UpdateBeta</span>(testR, D)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="28">
+<pre><code>401.2427310705195</code></pre>
+</div>
+</div>
+<div class="cell" data-execution_count="29">
+<div class="sourceCode cell-code" id="cb56"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb56-1"><a href="#cb56-1" aria-hidden="true" tabindex="-1"></a>n_nodes <span class="op">=</span> <span class="fu">size</span>(Ptest,<span class="fl">1</span>)</span>
+<span id="cb56-2"><a href="#cb56-2" aria-hidden="true" tabindex="-1"></a>n_datapoints <span class="op">=</span> <span class="fu">size</span>(Ptest, <span class="fl">2</span>)</span>
+<span id="cb56-3"><a href="#cb56-3" aria-hidden="true" tabindex="-1"></a>n_dimensions <span class="op">=</span> <span class="fu">size</span>(𝒟, <span class="fl">2</span>)  <span class="co"># number of columns for each data record</span></span>
+<span id="cb56-4"><a href="#cb56-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb56-5"><a href="#cb56-5" aria-hidden="true" tabindex="-1"></a><span class="fu">println</span>(n_nodes)</span>
+<span id="cb56-6"><a href="#cb56-6" aria-hidden="true" tabindex="-1"></a><span class="fu">println</span>(n_datapoints)</span>
+<span id="cb56-7"><a href="#cb56-7" aria-hidden="true" tabindex="-1"></a><span class="fu">println</span>(n_dimensions)</span>
+<span id="cb56-8"><a href="#cb56-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb56-9"><a href="#cb56-9" aria-hidden="true" tabindex="-1"></a>loglikelihood <span class="op">=</span> <span class="fl">0.0</span> </span>
+<span id="cb56-10"><a href="#cb56-10" aria-hidden="true" tabindex="-1"></a>prior <span class="op">=</span> <span class="fl">1.0</span><span class="op">/</span>n_nodes</span>
+<span id="cb56-11"><a href="#cb56-11" aria-hidden="true" tabindex="-1"></a><span class="co"># now we need the exponential prefactor that we skipped before when calculating P matrix</span></span>
+<span id="cb56-12"><a href="#cb56-12" aria-hidden="true" tabindex="-1"></a>prefactor <span class="op">=</span> (<span class="fl">1</span><span class="op">/</span>(<span class="fl">2</span><span class="op">*</span><span class="cn">π</span><span class="op">*</span>β⁻¹))<span class="op">^</span>(n_dimensions<span class="op">/</span><span class="fl">2</span>)</span>
+<span id="cb56-13"><a href="#cb56-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb56-14"><a href="#cb56-14" aria-hidden="true" tabindex="-1"></a><span class="fu">-sum</span>(<span class="fu">log</span>.(prior <span class="op">.*</span> prefactor <span class="op">.*</span> Ptest))  <span class="co"># we want to maximize log-likelihood or minimize -log-likelihood</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>100
+500
+10</code></pre>
+</div>
+<div class="cell-output cell-output-display" data-execution_count="29">
+<pre><code>2.037922385452767e6</code></pre>
+</div>
+</div>
+<p>The last piece we need is the ability to estimate the log-likelihood function…</p>
+<div class="cell" data-execution_count="30">
+<div class="sourceCode cell-code" id="cb59"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb59-1"><a href="#cb59-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">estimateLogLikelihood</span>(P, β⁻¹, 𝒟)</span>
+<span id="cb59-2"><a href="#cb59-2" aria-hidden="true" tabindex="-1"></a>    n_nodes <span class="op">=</span> <span class="fu">size</span>(Ptest,<span class="fl">1</span>)</span>
+<span id="cb59-3"><a href="#cb59-3" aria-hidden="true" tabindex="-1"></a>    n_datapoints <span class="op">=</span> <span class="fu">size</span>(Ptest, <span class="fl">2</span>)</span>
+<span id="cb59-4"><a href="#cb59-4" aria-hidden="true" tabindex="-1"></a>    n_dimensions <span class="op">=</span> <span class="fu">size</span>(𝒟, <span class="fl">2</span>)  <span class="co"># number of columns for each data record</span></span>
+<span id="cb59-5"><a href="#cb59-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb59-6"><a href="#cb59-6" aria-hidden="true" tabindex="-1"></a>    prior <span class="op">=</span> <span class="fl">1.0</span><span class="op">/</span>n_nodes</span>
+<span id="cb59-7"><a href="#cb59-7" aria-hidden="true" tabindex="-1"></a>    <span class="co"># now we need the exponential prefactor that we skipped before when calculating P matrix</span></span>
+<span id="cb59-8"><a href="#cb59-8" aria-hidden="true" tabindex="-1"></a>    prefactor <span class="op">=</span> (<span class="fl">1</span><span class="op">/</span>(<span class="fl">2</span><span class="op">*</span><span class="cn">π</span><span class="op">*</span>β⁻¹))<span class="op">^</span>(n_dimensions<span class="op">/</span><span class="fl">2</span>)</span>
+<span id="cb59-9"><a href="#cb59-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb59-10"><a href="#cb59-10" aria-hidden="true" tabindex="-1"></a>    loglikelihood <span class="op">=</span> <span class="fu">sum</span>(<span class="fu">log</span>.(prior <span class="op">.*</span> prefactor <span class="op">.*</span> Ptest))<span class="op">./</span>n_datapoints  <span class="co"># we want to maximize log-likelihood or minimize -log-likelihood</span></span>
+<span id="cb59-11"><a href="#cb59-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> loglikelihood</span>
+<span id="cb59-12"><a href="#cb59-12" aria-hidden="true" tabindex="-1"></a><span class="kw">end</span></span>
+<span id="cb59-13"><a href="#cb59-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb59-14"><a href="#cb59-14" aria-hidden="true" tabindex="-1"></a>ll <span class="op">=</span> <span class="fu">estimateLogLikelihood</span>(Ptest, β⁻¹, 𝒟)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="30">
+<pre><code>-4075.844770905534</code></pre>
+</div>
+</div>
+<p>supposing we have fit our model and now have the final responsability matrix, we will then need the ability to visualize the results! Recall that we have two <em>nice</em> ways to do this:</p>
+<ol type="1">
+<li>With the mean <span class="math inline">\langle \mathbf{x} \vert \mathbf{t}_n, W, \beta \rangle = \sum_k^K R_{kn}\mathbf{x}_k</span></li>
+<li>With the mode <span class="math inline">\mathbf{x}_{\text{mode}} = \mathbf{x}_{k^\text{max}}</span> where <span class="math inline">k^{\text{max}} = \underset{\{k\}}{\text{argmax}} R_{kn}</span></li>
+</ol>
+<div class="cell" data-execution_count="53">
+<div class="sourceCode cell-code" id="cb61"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb61-1"><a href="#cb61-1" aria-hidden="true" tabindex="-1"></a><span class="fu">println</span>(<span class="fu">size</span>(testR))</span>
+<span id="cb61-2"><a href="#cb61-2" aria-hidden="true" tabindex="-1"></a><span class="fu">println</span>(<span class="fu">size</span>(X))</span>
+<span id="cb61-3"><a href="#cb61-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb61-4"><a href="#cb61-4" aria-hidden="true" tabindex="-1"></a>res <span class="op">=</span> testR<span class="op">'</span> <span class="op">*</span> X</span>
+<span id="cb61-5"><a href="#cb61-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb61-6"><a href="#cb61-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb61-7"><a href="#cb61-7" aria-hidden="true" tabindex="-1"></a>cpalette <span class="op">=</span> <span class="fu">cgrad</span>(<span class="op">:</span>Accent_5, <span class="fl">5</span>, categorical<span class="op">=</span><span class="cn">true</span>)</span>
+<span id="cb61-8"><a href="#cb61-8" aria-hidden="true" tabindex="-1"></a>p1 <span class="op">=</span> <span class="fu">scatter</span>(res[<span class="op">:</span>,<span class="fl">1</span>], res[<span class="op">:</span>,<span class="fl">2</span>], marker_z<span class="op">=</span><span class="fu">int</span>(Datay), color<span class="op">=</span>cpalette, label<span class="op">=</span><span class="st">""</span>, colorbar<span class="op">=</span><span class="cn">false</span>, title<span class="op">=</span><span class="st">"PCA Initialization (mean)"</span>) </span>
+<span id="cb61-9"><a href="#cb61-9" aria-hidden="true" tabindex="-1"></a>p2 <span class="op">=</span> <span class="fu">scatter</span>(𝒟[<span class="op">:</span>,<span class="fl">1</span>],𝒟[<span class="op">:</span>,<span class="fl">2</span>], marker_z<span class="op">=</span><span class="fu">int</span>(Datay), color<span class="op">=</span>cpalette, label<span class="op">=</span><span class="st">""</span>, colorbar<span class="op">=</span><span class="cn">false</span>, title<span class="op">=</span><span class="st">"Original"</span>)</span>
+<span id="cb61-10"><a href="#cb61-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb61-11"><a href="#cb61-11" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(p2, p1)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>(100, 500)
+(100, 2)</code></pre>
+</div>
+<div class="cell-output cell-output-display" data-execution_count="53">
+<p><img src="generative_topographic_mapping_files/figure-html/cell-32-output-2.svg" class="img-fluid"></p>
+</div>
+</div>
+<div class="cell" data-execution_count="54">
+<div class="sourceCode cell-code" id="cb63"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb63-1"><a href="#cb63-1" aria-hidden="true" tabindex="-1"></a><span class="co"># nodex × datapoints</span></span>
+<span id="cb63-2"><a href="#cb63-2" aria-hidden="true" tabindex="-1"></a><span class="fu">println</span>(<span class="fu">size</span>(testR))</span>
+<span id="cb63-3"><a href="#cb63-3" aria-hidden="true" tabindex="-1"></a><span class="fu">argmax</span>(testR[<span class="op">:</span>,<span class="fl">1</span>])</span>
+<span id="cb63-4"><a href="#cb63-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb63-5"><a href="#cb63-5" aria-hidden="true" tabindex="-1"></a><span class="fu">scatter</span>(X[<span class="op">:</span>,<span class="fl">1</span>], X[<span class="op">:</span>,<span class="fl">2</span>], marker_z<span class="op">=</span>testR[<span class="op">:</span>,<span class="fl">5</span>])</span>
+<span id="cb63-6"><a href="#cb63-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb63-7"><a href="#cb63-7" aria-hidden="true" tabindex="-1"></a></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>(100, 500)</code></pre>
+</div>
+<div class="cell-output cell-output-display" data-execution_count="54">
+<p><img src="generative_topographic_mapping_files/figure-html/cell-33-output-2.svg" class="img-fluid"></p>
+</div>
+</div>
+<div class="cell" data-execution_count="55">
+<div class="sourceCode cell-code" id="cb65"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb65-1"><a href="#cb65-1" aria-hidden="true" tabindex="-1"></a>idx <span class="op">=</span> <span class="fu">argmax</span>(testR, dims<span class="op">=</span><span class="fl">1</span>)</span>
+<span id="cb65-2"><a href="#cb65-2" aria-hidden="true" tabindex="-1"></a>idx <span class="op">=</span> [idx[i][<span class="fl">1</span>] for i <span class="op">∈</span> <span class="fl">1</span><span class="op">:</span><span class="fu">length</span>(idx)]</span>
+<span id="cb65-3"><a href="#cb65-3" aria-hidden="true" tabindex="-1"></a>res <span class="op">=</span> X[idx, <span class="op">:</span>]</span>
+<span id="cb65-4"><a href="#cb65-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb65-5"><a href="#cb65-5" aria-hidden="true" tabindex="-1"></a><span class="co"># p3 = scatter(res[:,1], res[:,2], marker_z=int(Datay), color=cpalette, label="", colorbar=false, title="PCA Initialization (mode)")</span></span>
+<span id="cb65-6"><a href="#cb65-6" aria-hidden="true" tabindex="-1"></a><span class="co"># plot(p2, p1, p3, layout=(1,3), size=(1200, 300))</span></span>
+<span id="cb65-7"><a href="#cb65-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb65-8"><a href="#cb65-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb65-9"><a href="#cb65-9" aria-hidden="true" tabindex="-1"></a><span class="fu">scatter!</span>(p1, res[<span class="op">:</span>,<span class="fl">1</span>], res[<span class="op">:</span>,<span class="fl">2</span>], marker_z<span class="op">=</span><span class="fu">int</span>(Datay), color<span class="op">=</span>cpalette, marker<span class="op">=:</span>square, label<span class="op">=</span><span class="st">""</span>, colorbar<span class="op">=</span><span class="cn">false</span>, title<span class="op">=</span><span class="st">"PCA Initialization (mode)"</span>)</span>
+<span id="cb65-10"><a href="#cb65-10" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(p2, p1, size<span class="op">=</span>(<span class="fl">800</span>, <span class="fl">300</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="55">
+<p><img src="generative_topographic_mapping_files/figure-html/cell-34-output-1.svg" class="img-fluid"></p>
+</div>
+</div>
+<div class="cell" data-execution_count="58">
+<div class="sourceCode cell-code" id="cb66"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb66-1"><a href="#cb66-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">get_means</span>(R, X)</span>
+<span id="cb66-2"><a href="#cb66-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> R<span class="op">'</span> <span class="op">*</span> X</span>
+<span id="cb66-3"><a href="#cb66-3" aria-hidden="true" tabindex="-1"></a><span class="kw">end</span></span>
+<span id="cb66-4"><a href="#cb66-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb66-5"><a href="#cb66-5" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">get_modes</span>(R, X)</span>
+<span id="cb66-6"><a href="#cb66-6" aria-hidden="true" tabindex="-1"></a>    idx <span class="op">=</span> <span class="fu">argmax</span>(R, dims<span class="op">=</span><span class="fl">1</span>)</span>
+<span id="cb66-7"><a href="#cb66-7" aria-hidden="true" tabindex="-1"></a>    idx <span class="op">=</span> [idx[i][<span class="fl">1</span>] for i <span class="op">∈</span> <span class="fl">1</span><span class="op">:</span><span class="fu">length</span>(idx)]</span>
+<span id="cb66-8"><a href="#cb66-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> X[idx, <span class="op">:</span>]</span>
+<span id="cb66-9"><a href="#cb66-9" aria-hidden="true" tabindex="-1"></a><span class="kw">end</span></span>
+<span id="cb66-10"><a href="#cb66-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb66-11"><a href="#cb66-11" aria-hidden="true" tabindex="-1"></a><span class="fu">println</span>(<span class="fu">size</span>(testR))</span>
+<span id="cb66-12"><a href="#cb66-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb66-13"><a href="#cb66-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb66-14"><a href="#cb66-14" aria-hidden="true" tabindex="-1"></a><span class="fu">get_means</span>(testR, X);</span>
+<span id="cb66-15"><a href="#cb66-15" aria-hidden="true" tabindex="-1"></a><span class="fu">get_modes</span>(testR, X);</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>(100, 500)</code></pre>
+</div>
+</div>
+<p>We now have all of the pieces we need to be able to perform the EM algorithm until our model has converged. Let’s try it out!:</p>
+<p>Summary of all steps:</p>
+<ol type="1">
+<li>Initialize GTM grid parameters: number of nodes = k<em>k, number of rbf centers = m</em>m</li>
+<li>Create node matrix <span class="math inline">X</span> (holding coordinates)</li>
+<li>Create rbf centers matrix M</li>
+<li>Initialize rbf width <span class="math inline">\sigma</span></li>
+<li>Create rbf matrix <span class="math inline">\Phi</span></li>
+<li>Perform PCA on the data</li>
+<li>Set U matrix to 2 first principal axes of data cov. matrix (result of PCA)</li>
+<li>Initialize parameter matrix W using U and <span class="math inline">\Phi</span></li>
+<li>Initialize manifold Y using W and <span class="math inline">\Phi</span></li>
+<li>Set noise variance parameter <span class="math inline">\beta^{-1}</span> to the largest between:
+<ol type="1">
+<li>the 3rd eigenvalue of the data covariance matrix (i.e.&nbsp;3d explained variance value)</li>
+<li>half the average distance between centers of Gaussian components</li>
+</ol></li>
+<li>Create distance matrix D between manifold and data matrix</li>
+<li>Repeat until convergence
+<ol type="1">
+<li>Update data distribution P</li>
+<li>Update responsibilities R</li>
+<li>Update diagonal matrix G</li>
+<li>Update parameter matrix W</li>
+<li>Update manifold matrix Y</li>
+<li>Update distance matrix D</li>
+<li>Update noise variance parameter <span class="math inline">\beta^{-1}</span></li>
+<li>Estimate log likelihood and check for convergence</li>
+</ol></li>
+<li>Compute 2D GTM representation 1: means</li>
+<li>Compute 2D GTM representation 2: modes</li>
+</ol>
+<div class="cell" data-execution_count="60">
+<div class="sourceCode cell-code" id="cb68"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb68-1"><a href="#cb68-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">getCoordsMatrix</span>(k)</span>
+<span id="cb68-2"><a href="#cb68-2" aria-hidden="true" tabindex="-1"></a>    x <span class="op">=</span> <span class="fu">range</span>(<span class="op">-</span><span class="fl">1.0</span>, <span class="fl">1.0</span>, length<span class="op">=</span>k) </span>
+<span id="cb68-3"><a href="#cb68-3" aria-hidden="true" tabindex="-1"></a>    xs <span class="op">=</span> <span class="fu">vcat</span>([x[i] for i <span class="op">∈</span> <span class="fl">1</span><span class="op">:</span><span class="fu">length</span>(x), j <span class="op">∈</span> <span class="fl">1</span><span class="op">:</span><span class="fu">length</span>(x)]<span class="op">...</span>)</span>
+<span id="cb68-4"><a href="#cb68-4" aria-hidden="true" tabindex="-1"></a>    ys <span class="op">=</span> <span class="fu">vcat</span>([x[j] for i <span class="op">∈</span> <span class="fl">1</span><span class="op">:</span><span class="fu">length</span>(x), j<span class="op">∈</span> <span class="fl">1</span><span class="op">:</span><span class="fu">length</span>(x)]<span class="op">...</span>)</span>
+<span id="cb68-5"><a href="#cb68-5" aria-hidden="true" tabindex="-1"></a>    X <span class="op">=</span> <span class="fu">hcat</span>(xs, ys)  <span class="co"># X[:,1] are the x positions, X[:,2] are the y positions</span></span>
+<span id="cb68-6"><a href="#cb68-6" aria-hidden="true" tabindex="-1"></a><span class="kw">end</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="60">
+<pre><code>getCoordsMatrix (generic function with 1 method)</code></pre>
+</div>
+</div>
+<div class="cell" data-execution_count="61">
+<div class="sourceCode cell-code" id="cb70"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb70-1"><a href="#cb70-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">getΦMatrix</span>(X, M)</span>
+<span id="cb70-2"><a href="#cb70-2" aria-hidden="true" tabindex="-1"></a>    Φ <span class="op">=</span> <span class="fu">zeros</span>(n_nodes, n_rbf_centers <span class="op">+</span> <span class="fl">1</span>)</span>
+<span id="cb70-3"><a href="#cb70-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> j <span class="op">∈</span> <span class="fu">axes</span>(M,<span class="fl">1</span>), <span class="fu">i∈axes</span>(X,<span class="fl">1</span>)</span>
+<span id="cb70-4"><a href="#cb70-4" aria-hidden="true" tabindex="-1"></a>        Φ[i,j] <span class="op">=</span> <span class="fu">exp</span>(<span class="fu">-sqeuclidean</span>(X[i,<span class="op">:</span>], M[j,<span class="op">:</span>])<span class="op">/</span>(<span class="fl">2</span>σ))</span>
+<span id="cb70-5"><a href="#cb70-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">end</span></span>
+<span id="cb70-6"><a href="#cb70-6" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb70-7"><a href="#cb70-7" aria-hidden="true" tabindex="-1"></a>    <span class="co"># set the last column to ones to allow for a bias term</span></span>
+<span id="cb70-8"><a href="#cb70-8" aria-hidden="true" tabindex="-1"></a>    Φ[<span class="op">:</span>,<span class="kw">end</span>] <span class="op">.=</span> <span class="fl">1</span></span>
+<span id="cb70-9"><a href="#cb70-9" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb70-10"><a href="#cb70-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> Φ</span>
+<span id="cb70-11"><a href="#cb70-11" aria-hidden="true" tabindex="-1"></a><span class="kw">end</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="61">
+<pre><code>getΦMatrix (generic function with 1 method)</code></pre>
+</div>
+</div>
+<div class="cell" data-execution_count="66">
+<div class="sourceCode cell-code" id="cb72"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb72-1"><a href="#cb72-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 0. load dataset</span></span>
+<span id="cb72-2"><a href="#cb72-2" aria-hidden="true" tabindex="-1"></a><span class="im">using</span> <span class="bu">RDatasets</span></span>
+<span id="cb72-3"><a href="#cb72-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb72-4"><a href="#cb72-4" aria-hidden="true" tabindex="-1"></a>iris <span class="op">=</span> <span class="fu">dataset</span>(<span class="st">"datasets"</span>,<span class="st">"iris"</span>)</span>
+<span id="cb72-5"><a href="#cb72-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb72-6"><a href="#cb72-6" aria-hidden="true" tabindex="-1"></a>Dataset <span class="op">=</span><span class="fu">Matrix</span>(iris[<span class="op">:</span>, <span class="fl">1</span><span class="op">:</span><span class="fl">4</span>])</span>
+<span id="cb72-7"><a href="#cb72-7" aria-hidden="true" tabindex="-1"></a>classes <span class="op">=</span> iris[<span class="op">:</span>,<span class="fl">5</span>]</span>
+<span id="cb72-8"><a href="#cb72-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb72-9"><a href="#cb72-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb72-10"><a href="#cb72-10" aria-hidden="true" tabindex="-1"></a><span class="co"># 1. Initialize GTM Parameters </span></span>
+<span id="cb72-11"><a href="#cb72-11" aria-hidden="true" tabindex="-1"></a>k <span class="op">=</span> <span class="fl">20</span>  <span class="co"># there are K=k² total latent nodes</span></span>
+<span id="cb72-12"><a href="#cb72-12" aria-hidden="true" tabindex="-1"></a>m <span class="op">=</span> <span class="fl">10</span>  <span class="co"># there are M=m² basis functions (centers of our RBFs) </span></span>
+<span id="cb72-13"><a href="#cb72-13" aria-hidden="true" tabindex="-1"></a>σ <span class="op">=</span> <span class="fl">0.3</span> <span class="co"># the σ² is the variance in our RBFs</span></span>
+<span id="cb72-14"><a href="#cb72-14" aria-hidden="true" tabindex="-1"></a>α<span class="op">=</span><span class="fl">0.1</span> <span class="co"># reglarization parameter</span></span>
+<span id="cb72-15"><a href="#cb72-15" aria-hidden="true" tabindex="-1"></a>tol <span class="op">=</span> <span class="fl">0.0001</span> <span class="co">#  stop fitting if difference in log-likelihood is less than this amount</span></span>
+<span id="cb72-16"><a href="#cb72-16" aria-hidden="true" tabindex="-1"></a>verbose <span class="op">=</span> <span class="cn">true</span></span>
+<span id="cb72-17"><a href="#cb72-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb72-18"><a href="#cb72-18" aria-hidden="true" tabindex="-1"></a>n_nodes <span class="op">=</span> k<span class="op">*</span>k </span>
+<span id="cb72-19"><a href="#cb72-19" aria-hidden="true" tabindex="-1"></a>n_rbf_centers <span class="op">=</span> m<span class="op">*</span>m </span>
+<span id="cb72-20"><a href="#cb72-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb72-21"><a href="#cb72-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb72-22"><a href="#cb72-22" aria-hidden="true" tabindex="-1"></a><span class="co"># 2. create node matrix `X`</span></span>
+<span id="cb72-23"><a href="#cb72-23" aria-hidden="true" tabindex="-1"></a>X <span class="op">=</span> <span class="fu">getCoordsMatrix</span>(k)</span>
+<span id="cb72-24"><a href="#cb72-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb72-25"><a href="#cb72-25" aria-hidden="true" tabindex="-1"></a><span class="co"># 3. create RBF centers matrix `M`</span></span>
+<span id="cb72-26"><a href="#cb72-26" aria-hidden="true" tabindex="-1"></a>M <span class="op">=</span> <span class="fu">getCoordsMatrix</span>(m)</span>
+<span id="cb72-27"><a href="#cb72-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb72-28"><a href="#cb72-28" aria-hidden="true" tabindex="-1"></a><span class="co"># 4. Initialize RBF variance `σ`</span></span>
+<span id="cb72-29"><a href="#cb72-29" aria-hidden="true" tabindex="-1"></a>σ <span class="op">=</span> <span class="fu">mean</span>(<span class="fu">sqeuclidean</span>(M[<span class="op">:</span>,<span class="fl">1</span>], M[<span class="op">:</span>,<span class="fl">2</span>]))  <span class="co"># sqeuclidean is Squared Euclidean distance</span></span>
+<span id="cb72-30"><a href="#cb72-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb72-31"><a href="#cb72-31" aria-hidden="true" tabindex="-1"></a><span class="co"># 5. Create RBF matrix `Φ`</span></span>
+<span id="cb72-32"><a href="#cb72-32" aria-hidden="true" tabindex="-1"></a>Φ <span class="op">=</span> <span class="fu">getΦMatrix</span>(X,M)</span>
+<span id="cb72-33"><a href="#cb72-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb72-34"><a href="#cb72-34" aria-hidden="true" tabindex="-1"></a><span class="co"># 6. Perform PCA on Data </span></span>
+<span id="cb72-35"><a href="#cb72-35" aria-hidden="true" tabindex="-1"></a>pca <span class="op">=</span> <span class="fu">fit</span>(PCA, Dataset<span class="op">'</span>; maxoutdim<span class="op">=</span><span class="fl">3</span>)</span>
+<span id="cb72-36"><a href="#cb72-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb72-37"><a href="#cb72-37" aria-hidden="true" tabindex="-1"></a><span class="co"># 7. Set U to first two columns of data covariance matrix</span></span>
+<span id="cb72-38"><a href="#cb72-38" aria-hidden="true" tabindex="-1"></a>pca_vecs <span class="op">=</span> <span class="fu">projection</span>(pca)  <span class="co"># this results the princiap component vectors (columns) sorted in order of explained variance </span></span>
+<span id="cb72-39"><a href="#cb72-39" aria-hidden="true" tabindex="-1"></a>pca_var <span class="op">=</span> <span class="fu">principalvars</span>(pca)</span>
+<span id="cb72-40"><a href="#cb72-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb72-41"><a href="#cb72-41" aria-hidden="true" tabindex="-1"></a>U <span class="op">=</span> pca_vecs[<span class="op">:</span>,<span class="fl">1</span><span class="op">:</span><span class="fl">2</span>] </span>
+<span id="cb72-42"><a href="#cb72-42" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i <span class="op">∈</span> <span class="fu">axes</span>(U,<span class="fl">2</span>)</span>
+<span id="cb72-43"><a href="#cb72-43" aria-hidden="true" tabindex="-1"></a>    U[<span class="op">:</span>,i] <span class="op">.=</span> <span class="fu">sqrt</span>(pca_var[i])<span class="op">.*</span>U[<span class="op">:</span>,i] </span>
+<span id="cb72-44"><a href="#cb72-44" aria-hidden="true" tabindex="-1"></a><span class="cf">end</span></span>
+<span id="cb72-45"><a href="#cb72-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb72-46"><a href="#cb72-46" aria-hidden="true" tabindex="-1"></a><span class="co"># 8. Initialize parameter matrix `W` </span></span>
+<span id="cb72-47"><a href="#cb72-47" aria-hidden="true" tabindex="-1"></a>W <span class="op">=</span> <span class="fu">Init_W_Matrix</span>(X, Φ, U)</span>
+<span id="cb72-48"><a href="#cb72-48" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb72-49"><a href="#cb72-49" aria-hidden="true" tabindex="-1"></a><span class="co"># 9. Initialize projection manifold `Y`</span></span>
+<span id="cb72-50"><a href="#cb72-50" aria-hidden="true" tabindex="-1"></a>Y <span class="op">=</span> W<span class="op">*</span>Φ<span class="ch">'</span></span>
+<span id="cb72-51"><a href="#cb72-51" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb72-52"><a href="#cb72-52" aria-hidden="true" tabindex="-1"></a><span class="co"># 10. Initialize covariance `β⁻¹`</span></span>
+<span id="cb72-53"><a href="#cb72-53" aria-hidden="true" tabindex="-1"></a>β⁻¹ <span class="op">=</span> <span class="fu">maximum</span>([<span class="fu">mean</span>(<span class="fu">pairwise</span>(sqeuclidean, Y, dims<span class="op">=</span><span class="fl">2</span>))<span class="op">/</span><span class="fl">2</span>, pca_var[<span class="kw">end</span>]])</span>
+<span id="cb72-54"><a href="#cb72-54" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb72-55"><a href="#cb72-55" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb72-56"><a href="#cb72-56" aria-hidden="true" tabindex="-1"></a><span class="co"># 11. Create distance matrix `D` </span></span>
+<span id="cb72-57"><a href="#cb72-57" aria-hidden="true" tabindex="-1"></a>D <span class="op">=</span> <span class="fu">pairwise</span>(sqeuclidean, Y, Dataset<span class="op">'</span>)<span class="ch">'</span></span>
+<span id="cb72-58"><a href="#cb72-58" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb72-59"><a href="#cb72-59" aria-hidden="true" tabindex="-1"></a><span class="co"># 12. Repeat unitl convergence </span></span>
+<span id="cb72-60"><a href="#cb72-60" aria-hidden="true" tabindex="-1"></a><span class="co"># niter = 1000  # default maximum number of iterations</span></span>
+<span id="cb72-61"><a href="#cb72-61" aria-hidden="true" tabindex="-1"></a>niter <span class="op">=</span> <span class="fl">20</span>  <span class="co"># default maximum number of iterations</span></span>
+<span id="cb72-62"><a href="#cb72-62" aria-hidden="true" tabindex="-1"></a>i <span class="op">=</span> <span class="fl">1</span>  </span>
+<span id="cb72-63"><a href="#cb72-63" aria-hidden="true" tabindex="-1"></a>diff <span class="op">=</span> <span class="fl">1000</span></span>
+<span id="cb72-64"><a href="#cb72-64" aria-hidden="true" tabindex="-1"></a>converged <span class="op">=</span><span class="fl">0</span></span>
+<span id="cb72-65"><a href="#cb72-65" aria-hidden="true" tabindex="-1"></a>minusℓ <span class="op">=</span> <span class="fl">1000</span></span>
+<span id="cb72-66"><a href="#cb72-66" aria-hidden="true" tabindex="-1"></a>minusℓ_prev <span class="op">=</span> <span class="fl">1000</span> </span>
+<span id="cb72-67"><a href="#cb72-67" aria-hidden="true" tabindex="-1"></a><span class="cf">while</span> i <span class="op">&lt;</span> (niter) <span class="op">&amp;&amp;</span> converged <span class="op">&lt;</span> <span class="fl">4</span></span>
+<span id="cb72-68"><a href="#cb72-68" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb72-69"><a href="#cb72-69" aria-hidden="true" tabindex="-1"></a>    <span class="co"># 1. update data distribution</span></span>
+<span id="cb72-70"><a href="#cb72-70" aria-hidden="true" tabindex="-1"></a>    Pmat <span class="op">=</span> <span class="fu">Posterior</span>(β⁻¹, D)</span>
+<span id="cb72-71"><a href="#cb72-71" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb72-72"><a href="#cb72-72" aria-hidden="true" tabindex="-1"></a>    <span class="co"># 2. compute responsabilities</span></span>
+<span id="cb72-73"><a href="#cb72-73" aria-hidden="true" tabindex="-1"></a>    R <span class="op">=</span> <span class="fu">Responsabilities</span>(Pmat)</span>
+<span id="cb72-74"><a href="#cb72-74" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb72-75"><a href="#cb72-75" aria-hidden="true" tabindex="-1"></a>    <span class="co"># 3. Update diagonal matrix `G`</span></span>
+<span id="cb72-76"><a href="#cb72-76" aria-hidden="true" tabindex="-1"></a>    G <span class="op">=</span> <span class="fu">GetGMatrix</span>(R)</span>
+<span id="cb72-77"><a href="#cb72-77" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb72-78"><a href="#cb72-78" aria-hidden="true" tabindex="-1"></a>    <span class="co"># 4. Update parameter matrix `W`</span></span>
+<span id="cb72-79"><a href="#cb72-79" aria-hidden="true" tabindex="-1"></a>    W <span class="op">=</span> <span class="fu">UpdateW</span>(R, Φ, G, Dataset, β⁻¹; α<span class="op">=</span>α)</span>
+<span id="cb72-80"><a href="#cb72-80" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb72-81"><a href="#cb72-81" aria-hidden="true" tabindex="-1"></a>    <span class="co"># 5. Update manifold matrix `Y`</span></span>
+<span id="cb72-82"><a href="#cb72-82" aria-hidden="true" tabindex="-1"></a>    Y <span class="op">=</span> W<span class="op">*</span>Φ<span class="ch">'</span></span>
+<span id="cb72-83"><a href="#cb72-83" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb72-84"><a href="#cb72-84" aria-hidden="true" tabindex="-1"></a>    <span class="co"># 6. Update distance matrix `D`</span></span>
+<span id="cb72-85"><a href="#cb72-85" aria-hidden="true" tabindex="-1"></a>    D <span class="op">=</span> <span class="fu">pairwise</span>(sqeuclidean, Y, Dataset<span class="op">'</span>)<span class="ch">'</span></span>
+<span id="cb72-86"><a href="#cb72-86" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb72-87"><a href="#cb72-87" aria-hidden="true" tabindex="-1"></a>    <span class="co"># 7. Update `β⁻¹`</span></span>
+<span id="cb72-88"><a href="#cb72-88" aria-hidden="true" tabindex="-1"></a>    β⁻¹ <span class="op">=</span> <span class="fu">UpdateBeta</span>(R, D)</span>
+<span id="cb72-89"><a href="#cb72-89" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb72-90"><a href="#cb72-90" aria-hidden="true" tabindex="-1"></a>    <span class="co"># 8. Estimate log-likelihood and check for convergence</span></span>
+<span id="cb72-91"><a href="#cb72-91" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> i <span class="op">==</span> <span class="fl">1</span></span>
+<span id="cb72-92"><a href="#cb72-92" aria-hidden="true" tabindex="-1"></a>        minusℓ <span class="op">=</span> <span class="fu">-estimateLogLikelihood</span>(Pmat, β⁻¹, Dataset)</span>
+<span id="cb72-93"><a href="#cb72-93" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span></span>
+<span id="cb72-94"><a href="#cb72-94" aria-hidden="true" tabindex="-1"></a>        minusℓ_prev <span class="op">=</span> minusℓ</span>
+<span id="cb72-95"><a href="#cb72-95" aria-hidden="true" tabindex="-1"></a>        minusℓ <span class="op">=</span> <span class="fu">-estimateLogLikelihood</span>(Pmat, β⁻¹, Dataset)</span>
+<span id="cb72-96"><a href="#cb72-96" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb72-97"><a href="#cb72-97" aria-hidden="true" tabindex="-1"></a>        diff <span class="op">=</span> <span class="fu">abs</span>(minusℓ_prev <span class="op">-</span> minusℓ)</span>
+<span id="cb72-98"><a href="#cb72-98" aria-hidden="true" tabindex="-1"></a>    <span class="cf">end</span></span>
+<span id="cb72-99"><a href="#cb72-99" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb72-100"><a href="#cb72-100" aria-hidden="true" tabindex="-1"></a>    <span class="co"># we need to have 4 consecutaive updates with diff at or below the tolerance to exit</span></span>
+<span id="cb72-101"><a href="#cb72-101" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> diff <span class="op">&lt;=</span> tol</span>
+<span id="cb72-102"><a href="#cb72-102" aria-hidden="true" tabindex="-1"></a>        converged <span class="op">+=</span> <span class="fl">1</span></span>
+<span id="cb72-103"><a href="#cb72-103" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span></span>
+<span id="cb72-104"><a href="#cb72-104" aria-hidden="true" tabindex="-1"></a>        converged <span class="op">=</span> <span class="fl">0</span> </span>
+<span id="cb72-105"><a href="#cb72-105" aria-hidden="true" tabindex="-1"></a>    <span class="cf">end</span></span>
+<span id="cb72-106"><a href="#cb72-106" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb72-107"><a href="#cb72-107" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> verbose</span>
+<span id="cb72-108"><a href="#cb72-108" aria-hidden="true" tabindex="-1"></a>        <span class="fu">println</span>(<span class="st">"Iter: "</span>, i, <span class="st">"  ℓ: "</span>, <span class="op">-</span>minusℓ)</span>
+<span id="cb72-109"><a href="#cb72-109" aria-hidden="true" tabindex="-1"></a>    <span class="cf">end</span></span>
+<span id="cb72-110"><a href="#cb72-110" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb72-111"><a href="#cb72-111" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb72-112"><a href="#cb72-112" aria-hidden="true" tabindex="-1"></a>    i <span class="op">+=</span> <span class="fl">1</span></span>
+<span id="cb72-113"><a href="#cb72-113" aria-hidden="true" tabindex="-1"></a><span class="cf">end</span></span>
+<span id="cb72-114"><a href="#cb72-114" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb72-115"><a href="#cb72-115" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb72-116"><a href="#cb72-116" aria-hidden="true" tabindex="-1"></a>Pmat <span class="op">=</span> <span class="fu">Posterior</span>(β⁻¹, D);</span>
+<span id="cb72-117"><a href="#cb72-117" aria-hidden="true" tabindex="-1"></a>R <span class="op">=</span> <span class="fu">Responsabilities</span>(Pmat);</span>
+<span id="cb72-118"><a href="#cb72-118" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb72-119"><a href="#cb72-119" aria-hidden="true" tabindex="-1"></a><span class="co"># 13. Compute mean node responsability </span></span>
+<span id="cb72-120"><a href="#cb72-120" aria-hidden="true" tabindex="-1"></a>Rmeans <span class="op">=</span> <span class="fu">get_means</span>(R, X);</span>
+<span id="cb72-121"><a href="#cb72-121" aria-hidden="true" tabindex="-1"></a><span class="co"># 14. compute mode node responsability</span></span>
+<span id="cb72-122"><a href="#cb72-122" aria-hidden="true" tabindex="-1"></a>Rmodes <span class="op">=</span> <span class="fu">get_modes</span>(R, X);</span>
+<span id="cb72-123"><a href="#cb72-123" aria-hidden="true" tabindex="-1"></a></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Iter: 1  ℓ: -1677.4983562758482
+Iter: 2  ℓ: -1645.0048054848849
+Iter: 3  ℓ: -1644.0327191330757
+Iter: 4  ℓ: -1643.8901319265444
+Iter: 5  ℓ: -1643.8685996044135
+Iter: 6  ℓ: -1643.8653369980282
+Iter: 7  ℓ: -1643.8648423917648
+Iter: 8  ℓ: -1643.8647674044073
+Iter: 9  ℓ: -1643.8647560354252
+Iter: 10  ℓ: -1643.8647543117486
+Iter: 11  ℓ: -1643.864754050418</code></pre>
+</div>
+</div>
+<div class="cell" data-execution_count="67">
+<div class="sourceCode cell-code" id="cb74"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb74-1"><a href="#cb74-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Rmodes</span></span>
+<span id="cb74-2"><a href="#cb74-2" aria-hidden="true" tabindex="-1"></a>R</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="67">
+<pre><code>400×150 Matrix{Float64}:
+ 0.00255425  0.00256575  0.00256974  …  0.00245752  0.00245512  0.00247454
+ 0.00254577  0.00255542  0.00255877     0.00246429  0.00246227  0.00247867
+ 0.00253821  0.00254622  0.002549       0.00247029  0.0024686   0.00248231
+ 0.00253157  0.00253816  0.00254044     0.00247553  0.00247413  0.00248548
+ 0.00252587  0.00253125  0.00253311     0.00248001  0.00247886  0.00248817
+ 0.00252111  0.00252548  0.00252699  …  0.00248374  0.0024828   0.0024904
+ 0.0025173   0.00252086  0.00252209     0.00248671  0.00248594  0.00249218
+ 0.00251444  0.0025174   0.00251842     0.00248894  0.0024883   0.00249351
+ 0.00251253  0.00251509  0.00251598     0.00249042  0.00248986  0.00249439
+ 0.00251159  0.00251394  0.00251476     0.00249116  0.00249064  0.00249483
+ 0.00251159  0.00251395  0.00251477  …  0.00249116  0.00249064  0.00249482
+ 0.00251256  0.00251512  0.00251601     0.00249041  0.00248985  0.00249438
+ 0.00251448  0.00251744  0.00251847     0.00248891  0.00248827  0.00249349
+ ⋮                                   ⋱                          
+ 0.00251254  0.0025151   0.00251599     0.00249042  0.00248986  0.00249439
+ 0.00251159  0.00251395  0.00251477     0.00249116  0.00249064  0.00249483
+ 0.0025116   0.00251396  0.00251478  …  0.00249115  0.00249063  0.00249482
+ 0.00251257  0.00251513  0.00251601     0.0024904   0.00248984  0.00249437
+ 0.00251449  0.00251745  0.00251848     0.00248891  0.00248826  0.00249348
+ 0.00251736  0.00252093  0.00252216     0.00248667  0.0024859   0.00249215
+ 0.00252119  0.00252556  0.00252708     0.00248369  0.00248274  0.00249036
+ 0.00252597  0.00253134  0.00253321  …  0.00247995  0.00247879  0.00248812
+ 0.00253168  0.00253828  0.00254057     0.00247546  0.00247405  0.00248542
+ 0.00253834  0.00254635  0.00254914     0.00247021  0.00246851  0.00248224
+ 0.00254592  0.00255557  0.00255893     0.00246419  0.00246216  0.00247859
+ 0.00255441  0.00256592  0.00256992     0.00245741  0.00245501  0.00247445</code></pre>
+</div>
+</div>
+<div class="cell" data-execution_count="68">
+<div class="sourceCode cell-code" id="cb76"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb76-1"><a href="#cb76-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Visualize! </span></span>
+<span id="cb76-2"><a href="#cb76-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb76-3"><a href="#cb76-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb76-4"><a href="#cb76-4" aria-hidden="true" tabindex="-1"></a>p1 <span class="op">=</span> <span class="fu">scatter</span>(Dataset[<span class="op">:</span>,<span class="fl">1</span>],Dataset[<span class="op">:</span>,<span class="fl">2</span>], marker_z<span class="op">=</span><span class="fu">int</span>(classes), color<span class="op">=:</span>Accent_3, label<span class="op">=</span><span class="st">""</span>, colorbar<span class="op">=</span><span class="cn">false</span>, title<span class="op">=</span><span class="st">"Original Data"</span>)</span>
+<span id="cb76-5"><a href="#cb76-5" aria-hidden="true" tabindex="-1"></a>p2 <span class="op">=</span> <span class="fu">scatter</span>(Rmeans[<span class="op">:</span>,<span class="fl">1</span>], Rmeans[<span class="op">:</span>,<span class="fl">2</span>], marker_z<span class="op">=</span><span class="fu">int</span>(classes), color<span class="op">=:</span>Accent_3, label<span class="op">=</span><span class="st">""</span>, colorbar<span class="op">=</span><span class="cn">false</span>, title<span class="op">=</span><span class="st">"Mean node responsability"</span>) </span>
+<span id="cb76-6"><a href="#cb76-6" aria-hidden="true" tabindex="-1"></a>p3 <span class="op">=</span> <span class="fu">scatter</span>(Rmodes[<span class="op">:</span>,<span class="fl">1</span>], Rmodes[<span class="op">:</span>,<span class="fl">2</span>], marker_z<span class="op">=</span><span class="fu">int</span>(classes), color<span class="op">=:</span>Accent_3, label<span class="op">=</span><span class="st">""</span>, colorbar<span class="op">=</span><span class="cn">false</span>, title<span class="op">=</span><span class="st">"Mode node responsability"</span>)</span>
+<span id="cb76-7"><a href="#cb76-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb76-8"><a href="#cb76-8" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(p1, p2, p3, layout<span class="op">=</span>(<span class="fl">1</span>,<span class="fl">3</span>), size<span class="op">=</span>(<span class="fl">1200</span>, <span class="fl">300</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="68">
+<p><img src="generative_topographic_mapping_files/figure-html/cell-40-output-1.svg" class="img-fluid"></p>
 </div>
 </div>
 </section>
