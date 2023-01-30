@@ -28,7 +28,7 @@ git-tree-sha1 = "6030186b00a38e9d0434518627426570aac2ef95"
 uuid = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 version = "0.27.23"
 
-[[deps.GTM]]
+[[deps.GenerativeTopographicMapping]]
 path = ".."
 uuid = "110c1e60-17ba-4aeb-8cee-444277a6d160"
 version = "0.1.0"
