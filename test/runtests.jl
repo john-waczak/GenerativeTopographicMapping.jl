@@ -123,7 +123,7 @@ end
     Xmode2 = GenerativeTopographicMapping.get_modes(gtm, Dataset)
     @test all(Xmode .== Xmode2)
 
-    classes = getModeidx(gtm, Dataset)
+    classes = GenerativeTopographicMapping.getModeidx(gtm, Dataset)
     @test length(classes) == size(Dataset,1)
 
 
@@ -133,8 +133,22 @@ end
 
 @testset "GTM with MLJ" begin
     # generate synthetic dataset for testing with 100 data points, 10 features, and 5 classes
-    Data_X, Data_y = make_blobs(100, 10;centers=5, rng=stable_rng());
-    Dataset = Tables.matrix(Data_X)
+    X, y = make_blobs(100, 10;centers=5, rng=stable_rng());
+
+    model = GTM()
+    m = machine(model, X)
+    res = fit!(m, verbosity=0)
+
+    X̃ = MLJBase.transform(m, X)
+    @test size(X̃) == (100, 2)
+
+    fp = fitted_params(m)
+    @test Set([:gtm]) == Set(keys(fp))
+
+    rpt = report(m)
+    @test Set([:classes]) == Set(keys(rpt))
+    @test size(rpt.classes, 1) == 100
+
 
 end
 

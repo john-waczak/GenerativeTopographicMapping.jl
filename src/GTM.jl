@@ -146,7 +146,7 @@ function GenerativeTopographicMap(k, m, σ, Dataset; α=0.1, tol=0.0001, niter=2
     σ² = initializeVariance(σ, M)
     Φ = getΦMatrix(X, M, σ²)
     U,β⁻¹ = getUMatrix(Dataset)
-    W = GTM.initWMatrix(X, Φ, U)
+    W = initWMatrix(X, Φ, U)
 
     Y = W*Φ'
 

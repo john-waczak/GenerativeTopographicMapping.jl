@@ -21,6 +21,7 @@ MMI.@mlj_model mutable struct GTM <: MMI.Unsupervised
     tol::Float64 = 0.0001::(_ > 0.0)
     niter::Int = 200::(_ ≥ 1)
     nrepeats::Int = 4::(_ ≥ 1)
+    representation::Symbol = :means::(_ ∈ (:means, :modes))
 end
 
 
@@ -43,7 +44,7 @@ function MMI.fit(g::GTM, verbosity::Int, X)
                                    tol=g.tol,
                                    niter=g.niter,
                                    nrepeats=g.nrepeats,
-                                   verbosity=printiters
+                                   verbose=printiters
                                    )
     # 2. Fit the GTM
     fit!(gtm, Dataset)
@@ -58,6 +59,23 @@ function MMI.fit(g::GTM, verbosity::Int, X)
 end
 
 
+# there's lots you can do with this so just return the whole thing anyways
+MMI.fitted_params(m::GTM, fitresult) = (gtm=fitresult,)
+
+
+function MMI.transform(m::GTM, fitresult, X)
+    gtm = fitresult
+    # return the coordinates of the bmu for each instance
+    Dataset = MMI.matrix(X)
+
+    if m.representation == :means
+        res = get_means(gtm, Dataset)
+    else
+        res = get_modes(gtm, Dataset)
+    end
+
+    return res
+end
 
 
 end
