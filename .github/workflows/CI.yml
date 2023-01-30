@@ -50,6 +50,6 @@ jobs:
       - run: |
           julia --project=docs -e '
             using Documenter: DocMeta, doctest
-            using GTM
-            DocMeta.setdocmeta!(GTM, :DocTestSetup, :(using GTM); recursive=true)
-            doctest(GTM)'
+            using GenerativeTopographicMapping
+            DocMeta.setdocmeta!(GenerativeTopographicMapping, :DocTestSetup, :(using GenerativeTopographicMapping); recursive=true)
+            doctest(GenerativeTopographicMapping)'
