@@ -1,14 +1,14 @@
 ```@meta
-CurrentModule = GTM
+CurrentModule = GenerativeTopographicMapping
 ```
 
-# GTM
+# GenerativeTopographicMapping
 
-Documentation for [GTM](https://github.com/john-waczak/GTM.jl).
+Documentation for [GTM](https://github.com/john-waczak/GenerativeTopographicMapping.jl).
 
 ```@index
 ```
 
 ```@autodocs
-Modules = [GTM]
+Modules = [GenerativeTopographicMapping]
 ```

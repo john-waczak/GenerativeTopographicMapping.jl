@@ -1,16 +1,16 @@
-using GTM
+using GenerativeTopographicMapping
 using Documenter
 
-DocMeta.setdocmeta!(GTM, :DocTestSetup, :(using GTM); recursive=true)
+DocMeta.setdocmeta!(GenerativeTopographicMapping, :DocTestSetup, :(using GenerativeTopographicMapping); recursive=true)
 
 makedocs(;
-    modules=[GTM],
+    modules=[GenerativeTopographicMapping],
     authors="John Waczak <john.louis.waczak@gmail.com>",
-    repo="https://github.com/john-waczak/GTM.jl/blob/{commit}{path}#{line}",
-    sitename="GTM.jl",
+    repo="https://github.com/john-waczak/GenerativeTopographicMapping.jl/blob/{commit}{path}#{line}",
+    sitename="GenerativeTopographicMapping.jl",
     format=Documenter.HTML(;
         prettyurls=get(ENV, "CI", "false") == "true",
-        canonical="https://john-waczak.github.io/GTM.jl",
+        canonical="https://john-waczak.github.io/GenerativeTopographicMapping.jl",
         edit_link="main",
         assets=String[],
     ),
