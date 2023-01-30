@@ -78,6 +78,91 @@ function MMI.transform(m::GTM, fitresult, X)
 end
 
 
+
+metadata_pkg.(
+    (GTM,),
+    name="GenerativeTopographicMapping",
+    uuid="110c1e60-17ba-4aeb-8cee-444277a6d160",
+    url="https://github.com/john-waczak/GenerativeTopographicMapping.jl",
+    julia=true,
+    license="MIT",
+    is_wrapper=false
+)
+
+metadata_model(
+    GTM,
+    input_scitype = Union{AbstractMatrix{Continuous}, MMI.Table(Continuous)},
+    output_scitype = AbstractMatrix{Continuous},
+    load_path = "$(PKG).GenerativeTopographicMapping",
+)
+
+
+
+# ------------ documentation ------------------------
+
+
+const DOC_GTM = "[Generative Topographic Mapping](https://direct.mit.edu/neco/article/10/1/215-234/6127)"*
+    ", Neural Computation; Bishop, C.; (1998):"*
+    "\"GTM: The Generative Topographic Mapping\""
+
+
+"""
+$(MMI.doc_header(GenerativeTopographicMapping))
+
+GenerativeTopographicMapping implements $(DOC_GTM)
+
+# Training data
+In MLJ or MLJBase, bind an instance `model` to data with
+    mach = machine(model, X)
+where
+- `X`: an `AbstractMatrix` or `Table` of input features whose columns are of scitype `Continuous.`
+
+Train the machine with `fit!(mach, rows=...)`.
+
+# Hyper-parameters
+- `k=16`: Number of nodes along once side of GTM latent grid. There are `k²` total nodes.
+- `m=4`: Square root of the number of RBF functions in latent transformation. There are `m²` total RBFs.
+- `σ=0.3`: Standard deviation for RBF functions in latent transformation.
+- `α=0.1`  Model weight regularization parameter (0.0 for regularization)
+- `tol=0.0001` Tolerance used for determining convergence during expectation-maximization fitting.
+- `niter=200` Maximum number of iterations to use.
+- `nrepeats=4` Number of steps to repeat at/below `tol` before GTM is considered converged.
+- `representation=:means` Method to apply to fitted responsability matrix. One of `(:means, :modes)`.
+
+# Operations
+- `transform(mach, X)`: returns the coordinates corresponding to mean latent node responsability or mode latent node responsability for each data point. This can be used as a two-dimensional representation of the original dataset `X`.
+
+# Fitted parameters
+The fields of `fitted_params(mach)` are:
+
+- `gtm`: The `GenerativeTopographicMap` object fit by the `GTM` model. Contains node coordinates, RbF means, RBF variance, weights, etc.
+
+
+# Report
+The fields of `report(mach)` are:
+- `classes`: the index of the mode node responsability for each datapoint in X interpreted as a class label
+
+# Examples
+```
+using MLJ
+gtm = @load GTM pkg=GenerativeTopographicMapping
+model = gtm()
+X, y = make_blob(100, 10; centers=5) # synthetic data
+mach = machine(model, X) |> fit!
+X̃ = transform(mach, X)
+
+rpt = report(mach)
+classes = rpt.classes
+```
+"""
+GTM
+
+
+
+
+
+
+
 end
 
 
