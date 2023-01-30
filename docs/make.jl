@@ -20,6 +20,6 @@ makedocs(;
 )
 
 deploydocs(;
-    repo="github.com/john-waczak/GTM.jl",
+    repo="github.com/john-waczak/GenerativeTopographicMapping.jl",
     devbranch="main",
 )

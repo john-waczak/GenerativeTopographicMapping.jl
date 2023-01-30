@@ -4,7 +4,7 @@ CurrentModule = GenerativeTopographicMapping
 
 # GenerativeTopographicMapping
 
-Documentation for [GTM](https://github.com/john-waczak/GenerativeTopographicMapping.jl).
+Documentation for [GenerativeTopographicMapping](https://github.com/john-waczak/GenerativeTopographicMapping.jl).
 
 ```@index
 ```
