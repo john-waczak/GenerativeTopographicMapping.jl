@@ -2,7 +2,7 @@
 
 julia_version = "1.8.5"
 manifest_format = "2.0"
-project_hash = "bf522d3861b2649d2075fc3189d5b979786c40df"
+project_hash = "bff55d78f624129261f95dbd87f68204d6c2336b"
 
 [[deps.ARFFFiles]]
 deps = ["CategoricalArrays", "Dates", "Parsers", "Tables"]
@@ -333,6 +333,14 @@ deps = ["Artifacts", "Bzip2_jll", "Cairo_jll", "FFMPEG_jll", "Fontconfig_jll", "
 git-tree-sha1 = "5982b5e20f97bff955e9a2343a14da96a746cd8c"
 uuid = "d2c73de3-f751-5644-a686-071e5b155ba9"
 version = "0.71.3+0"
+
+[[deps.GenerativeTopographicMapping]]
+deps = ["Distances", "LinearAlgebra", "MLJModelInterface", "MultivariateStats", "Random", "Statistics"]
+git-tree-sha1 = "497fd6c9fef2153a02318c675f3314c699fcbaf5"
+repo-rev = "main"
+repo-url = "https://github.com/john-waczak/GenerativeTopographicMapping.jl.git"
+uuid = "110c1e60-17ba-4aeb-8cee-444277a6d160"
+version = "0.1.0"
 
 [[deps.Gettext_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "JLLWrappers", "Libdl", "Libiconv_jll", "Pkg", "XML2_jll"]
