@@ -90,7 +90,7 @@ end
     X̃ = MLJBase.transform(m, X)
     @assert size(matrix(X̃)) == (100,2)
 
-    y = MLJBase.predict(m, X)
+    classes = MLJBase.predict(m, X)
     @assert length(y) == 100
 
 

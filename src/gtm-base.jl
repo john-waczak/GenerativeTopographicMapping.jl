@@ -237,7 +237,7 @@ end
 function class_labels(gtm, X)
     Ψ = gtm.W * gtm.Φ'
     Δ² = pairwise(sqeuclidean, Ψ, X', dims=2)
-    P = getPMatrix(Δ², gtm.β⁻¹)
+    P, Pmaxes = getPMatrix(Δ², gtm.β⁻¹)
     R = Responsabilities(P)
 
     idx = argmax(R, dims=1)
