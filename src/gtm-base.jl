@@ -90,7 +90,7 @@ function exp_normalize(Λ)
     for j in axes(Λ, 2)
         res[:,j] .= exp.(Λ[:,j] .- maxes[j])
     end
-    return res
+    return res, maxes
 end
 
 
@@ -129,13 +129,22 @@ function getUpdateβ⁻¹(R, Δ², X)
 end
 
 
-function loglikelihood(P, β⁻¹, X, Ξ)
+function loglikelihood(P, Pmaxes, β⁻¹,X)
+    # ugtm uses P instead of Δ² for some reason...
+    # this seemed to cause llh values > 0 on mnist
+
     N, D = size(X)
-    K = size(Ξ,1)
+    K, N2 = size(P)
+
+    @assert N == N2
 
     prexp = (1/(2* β⁻¹* π))^(D/2)
 
-    return sum(log.((prexp/K) .* sum(P, dims=1)))
+    l = 0.0
+    #l = max(sum(log.((prexp/K) .* sum(P, dims=1))), nextfloat(typemin(1.0)))
+    l = max(sum(log(prexp/K) .+ Pmaxes .+ log.(sum(P, dims=1))), nextfloat(typemin(1.0)))
+    # l = l/N
+    return l
 end
 
 
@@ -155,24 +164,17 @@ function fit!(gtm, X; α = 0.1, niter=100, tol=0.001, nconverged=5, printiters=f
     converged = false  # a flag to tell us if we converged successfully
     for i in 1:niter
         # expectation
-        P = getPMatrix(Δ², gtm.β⁻¹)
+        P, Pmaxes = getPMatrix(Δ², gtm.β⁻¹)
         R = Responsabilities(P)
         G = diagm(sum(R, dims=2)[:])
 
-        # (maximization)
-        gtm.W = getUpdateW(R, G, gtm.Φ, X, gtm.β⁻¹, α)
-        Ψ = gtm.W * gtm.Φ'
-        #Δ² = pairwise(sqeuclidean, Ψ, X', dims=2)
-        pairwise!(sqeuclidean, Δ², Ψ, X', dims=2)
-        gtm.β⁻¹ = getUpdateβ⁻¹(R, Δ², X)
-
         # compute log-likelihood
         if i == 1
-            l = loglikelihood(P, gtm.β⁻¹, X, gtm.Ξ)
+            l = loglikelihood(P, Pmaxes, gtm.β⁻¹, X)
             push!(llhs, l)
         else
             llh_prev = l
-            l = loglikelihood(P, gtm.β⁻¹, X, gtm.Ξ)
+            l = loglikelihood(P, Pmaxes, gtm.β⁻¹, X)
             push!(llhs, l)
 
             # check for convergence
@@ -189,6 +191,12 @@ function fit!(gtm, X; α = 0.1, niter=100, tol=0.001, nconverged=5, printiters=f
             end
         end
 
+        # (maximization)
+        gtm.W = getUpdateW(R, G, gtm.Φ, X, gtm.β⁻¹, α)
+        Ψ = gtm.W * gtm.Φ'
+        pairwise!(sqeuclidean, Δ², Ψ, X', dims=2)
+        gtm.β⁻¹ = getUpdateβ⁻¹(R, Δ², X)
+
         if printiters
             println("iter: $(i), log-likelihood = $(l)")
         end
@@ -197,7 +205,7 @@ function fit!(gtm, X; α = 0.1, niter=100, tol=0.001, nconverged=5, printiters=f
     # update responsabilities after final pass
     Ψ = gtm.W * gtm.Φ'
     Δ² = pairwise(sqeuclidean, Ψ, X', dims=2)
-    P = getPMatrix(Δ², gtm.β⁻¹)
+    P, Pmaxes = getPMatrix(Δ², gtm.β⁻¹)
     R = Responsabilities(P)
 
     return converged,llhs, R
@@ -208,7 +216,7 @@ end
 function DataMeans(gtm, X)
     Ψ = gtm.W * gtm.Φ'
     Δ² = pairwise(sqeuclidean, Ψ, X', dims=2)
-    P = getPMatrix(Δ², gtm.β⁻¹)
+    P, Pmaxes = getPMatrix(Δ², gtm.β⁻¹)
     R = Responsabilities(P)
 
     return R'*gtm.Ξ
@@ -218,7 +226,7 @@ end
 function DataModes(gtm, X)
     Ψ = gtm.W * gtm.Φ'
     Δ² = pairwise(sqeuclidean, Ψ, X', dims=2)
-    P = getPMatrix(Δ², gtm.β⁻¹)
+    P, Pmaxes = getPMatrix(Δ², gtm.β⁻¹)
     R = Responsabilities(P)
 
     idx = argmax(R, dims=1)
@@ -260,7 +268,7 @@ end
 
 
 function data_reconstruction(gtm, X)
-    R = transform_responsability(gtm, X)
+    R = responsability(gtm, X)
     Ψ = gtm.W * gtm.Φ'
 
     # compute rmse reproduction error...
@@ -273,9 +281,9 @@ end
 function BIC(gtm, X)
     Ψ = gtm.W * gtm.Φ'
     Δ² = pairwise(sqeuclidean, Ψ, X', dims=2)
-    P = getPMatrix(Δ², gtm.β⁻¹)
+    P, Pmaxes = getPMatrix(Δ², gtm.β⁻¹)
     R = Responsabilities(P)
-    l = loglikelihood(P, gtm.β⁻¹, X, gtm.Ξ)
+    l = loglikelihood(P, Pmaxes, gtm.β⁻¹, X)
 
     return log(size(X,1))*length(gtm.W) - 2*l
 end
@@ -284,9 +292,9 @@ end
 function AIC(gtm, X)
     Ψ = gtm.W * gtm.Φ'
     Δ² = pairwise(sqeuclidean, Ψ, X', dims=2)
-    P = getPMatrix(Δ², gtm.β⁻¹)
+    P, Pmaxes = getPMatrix(Δ², gtm.β⁻¹)
     R = Responsabilities(P)
-    l = loglikelihood(P, gtm.β⁻¹, X, gtm.Ξ)
+    l = loglikelihood(P, Pmaxes, gtm.β⁻¹, X)
 
     return 2*length(gtm.W) - 2*l
 end

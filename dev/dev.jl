@@ -43,15 +43,15 @@ column_labels = uppercasefirst.(replace.(names(df)[1:4], "."=>" "))
 y = [findfirst(y[i] .== target_labels) for i in axes(y,1)]
 
 # visualize the dataset
-k = 4
-m = 3
-s = 2
-
-gtm = GTM(k=4, m=3, s=2, α=0.1, niter=100, tol=.1)
+gtm = GTM(k=7, m=2, α=0.1, niter=100, tol=.1)
 mach = machine(gtm, X)
 fit!(mach)
+res = fitted_params(mach)[:gtm]
 
 
+rpt = report(mach)
+llhs = rpt[:llhs]
+Ξ = rpt[:Ξ]
 
 fig = Figure();
 ax = Axis(fig[1,1], xlabel="iteration", ylabel="log-likelihood")
@@ -61,13 +61,13 @@ fig
 save("../figures/iris-llh.png", fig)
 
 
-means = DataMeans(gtm, X)
-modes = DataModes(gtm, X)
 
+means = MLJ.transform(mach, X)
+mode_idxs = MLJ.predict(mach, X)
+modes = DataModes(res, Matrix(X))
 
-pca = fit(PCA, X', maxoutdim=3, pratio=0.99999)
-
-Xpca = predict(pca, X')'
+pca = fit(PCA, Matrix(X)', maxoutdim=3, pratio=0.99999)
+Xpca = MultivariateStats.predict(pca, Matrix(X)')'
 
 fig = Figure();
 gl = fig[1,1] = GridLayout();
@@ -116,9 +116,9 @@ scatter!(ax2, Xpca[idx2,1], Xpca[idx2,2], color=mints_colors[2])
 scatter!(ax2, Xpca[idx3,1], Xpca[idx3,2], color=mints_colors[3])
 
 
-scatter!(ax3, means[idx1,1], means[idx1,2], color=mints_colors[1])
-scatter!(ax3, means[idx2,1], means[idx2,2], color=mints_colors[2])
-scatter!(ax3, means[idx3,1], means[idx3,2], color=mints_colors[3])
+scatter!(ax3, means[:ξ₁][idx1], means[:ξ₂][idx1], color=mints_colors[1])
+scatter!(ax3, means[:ξ₁][idx2], means[:ξ₂][idx2], color=mints_colors[2])
+scatter!(ax3, means[:ξ₁][idx3], means[:ξ₂][idx3], color=mints_colors[3])
 
 scatter!(ax4, modes[idx1,1], modes[idx1,2], color=mints_colors[1])
 scatter!(ax4, modes[idx2,1], modes[idx2,2], color=mints_colors[2])
@@ -131,30 +131,34 @@ fig
 save("../figures/iris-gtm-compare.png", fig)
 
 
+
+
 # set up parameter grid
-ks = 2:1:20
+ks = 2:1:12
 ms = 2:1:10
 
 bics = zeros(length(ks), length(ms))
 aics = zeros(length(ks), length(ms))
 Δrec = zeros(length(ks), length(ms))
 
+
 for k in ks
+    println(k)
     for m in ms
-        s = 2
+        gtm = GTM(k=k, m=m, s=0.3, α=0.1, niter=200, tol=.1)
+        mach = machine(gtm, X)
+        fit!(mach, verbosity=0)
+        res = fitted_params(mach)[:gtm]
+        rpt = report(mach)
 
-        gtm = GTMBase(k, m, s, X)
-        converged,llhs, R = fit!(gtm, X, α =0.1, niter=100, tol=0.1)
-
-        bics[k-1,m-1] =  BIC(gtm, X)
-        aics[k-1,m-1] =  AIC(gtm, X)
+        bics[k-1,m-1] =  rpt[:BIC]
+        aics[k-1,m-1] =  rpt[:AIC]
 
         # compute reconstruction error
-        Δrec[k-1, m-1] = sqrt(mean((data_reconstruction(gtm, X) .- X).^2))
+        Δrec[k-1, m-1] = sqrt(mean((rpt[:latent_means] .- Matrix(X)').^2))
     end
 end
 
-Δrec
 
 idx_bic = argmin(bics)
 k_b = ks[idx_bic[1]]
@@ -212,6 +216,10 @@ size(trainset.features)
 
 img_shape = size(trainset.features)[1:2]
 X = reshape(trainset.features, 28*28, size(trainset.features,3))'
+headers = [Symbol("x_$(i)") for i in 1:28*28]
+df = table(X, names=headers)
+
+n_digits = 10
 
 # ---- visualize a number ------------
 fig = Figure();
@@ -233,7 +241,7 @@ for idx in 1:length(idxs)
     hidedecorations!(ax)
     hidespines!(ax)
 
-    heatmap!(ax, reshape(X[idx,:], img_shape), colormap=cmap_wb)
+    image!(ax, reshape(X[idx,:], img_shape), colormap=cmap_wb)
 end
 
 fig
@@ -244,20 +252,33 @@ save("../figures/mnist-samples.png", fig)
 
 k = 25
 m = 8
-s = 0.3
-α = 0.1
-gtm = GTMBase(k, m, s, X)
-converged,llhs, R = fit!(gtm, X, α=α, niter=200, tol=0.005, nconverged=4)
 
-lines(llhs)
+gtm = GTM(k=k, m=m, s=0.3, α=0.1, niter=200, tol=.1)
+mach = machine(gtm, df)
+fit!(mach, verbosity=1)
 
-digit_means = DataMeans(gtm, X)
-digit_modes = DataModes(gtm, X)
+rpt = report(mach)
+res = fitted_params(mach)[:gtm]
+llhs = rpt[:llhs]
 
-pca = fit(PCA, X', maxoutdim=3, pratio=0.99999)
-U = predict(pca, X')[1:2,:]'
+#fig = Figure();
+#ax = Axis(fig[1,1], xlabel="iteration", ylabel="log-likelihood")
+#lines!(ax, 1:length(llhs), llhs, linewidth=5)
+#fig
 
-cm = cgrad(:roma10, ndigits, categorical=true)
+
+# digit_means = DataMeans(gtm, X)
+# digit_modes = DataModes(gtm, X)
+
+digit_means = MLJ.transform(mach, df)
+digit_modes = modes = DataModes(res, X)
+
+
+
+pca = MultivariateStats.fit(PCA, X', maxoutdim=3, pratio=0.99999);
+U = MultivariateStats.predict(pca, X')[1:2,:]'
+
+cm = cgrad(:roma10, n_digits, categorical=true)
 
 fig = Figure(resolution=(1000,350));
 ax = Axis(fig[1,1], title="PCA", xlabel="u₁", ylabel="u₂"); #, aspect=DataAspect());
@@ -265,14 +286,10 @@ ax2 = Axis(fig[1,2], title="GTM Means", xlabel="ξ₁", ylabel="ξ₂"); #, aspe
 ax3 = Axis(fig[1,3], title="GTM Modes", xlabel="ξ₁", ylabel="ξ₂"); #, aspect=DataAspect());
 
 sc = scatter!(ax, U[:,1], U[:,2], color=targets, colormap=cm)
-sc2 = scatter!(ax2, digit_means[:,1], digit_means[:,2], color=targets, colormap=cm, alpha=0.75)
+sc2 = scatter!(ax2, digit_means[:ξ₁], digit_means[:ξ₂], color=targets, colormap=cm, alpha=0.75)
 sc3 = scatter!(ax3, digit_modes[:,1], digit_modes[:,2], color=targets, colormap=cm, alpha=0.75)
 
-cb = Colorbar(fig[1,4], colormap=cm, limits=(0,ndigits-1), ticks=(range(0.5, stop=ndigits-1.5, length=ndigits), string.(0:ndigits-1)))
-
-
-size(digit_means)
-size(digit_modes)
+cb = Colorbar(fig[1,4], colormap=cm, limits=(0,n_digits-1), ticks=(range(0.5, stop=n_digits-1.5, length=n_digits), string.(0:n_digits-1)))
 
 fig
 
@@ -280,53 +297,11 @@ save("../figures/mnist-gtm.png", fig)
 
 
 
-size(R')
+R = responsability(res, X)
+pred_1 = R[1,:]
 
 
-pred_1 = R[:,1]
-
-
-fig, ax, sc = scatter(gtm.Ξ[:,1], gtm.Ξ[:,2], color=pred_1, colorrange=(eps(Float64), maximum(pred_1)), markersize=25,colormap=:roma, lowclip=:transparent)
-
-cb = Colorbar(fig[1,2], sc, label="responsability")
-
-fig
-
-heatmap()
-
-
-size(pred_1)
-size(gtm.Ξ)
-
-
-Ψ = gtm.W * gtm.Φ'
-
-size(Ψ)
-Ψ
-
-
-fig = Figure();
-gl = fig[1,1] = GridLayout();
-
-idxs = [(i,j) for i in 1:25 for j in 1:25]
-@showprogress for idx in 1:length(idxs)
-    i,j = idxs[idx]
-
-    ax = Axis(
-        gl[i,j],
-        aspect=DataAspect(),
-        yreversed=true,
-        #title="$(targets[idx])",
-        #titlesize=50,
-    );
-    hidedecorations!(ax)
-    hidespines!(ax)
-
-    heatmap!(ax, reshape(Ψ[:,idx], 28, 28), colormap=cmap_wb)
-end
-
-fig
-
+Ψ = res.W * res.Φ'
 
 idxs = [(i,j) for i in 1:25 for j in 1:25]
 
@@ -341,20 +316,20 @@ kx = range(-1.0, stop=1.0, length=k)
 ky = range(-1.0, stop=1.0, length=k)
 
 δ = (kx[2]-kx[1])/2
-# δ = 2 * δ
 
 fig = Figure(resolution = (1200,1200))
 ax = Axis(fig[1,1], xlabel="ξ₁", ylabel="ξ₂", title="GTM Latent Features", xlabelsize=35, ylabelsize=35, titlesize=50)
-s = scatter!(ax, gtm.Ξ[:,1], gtm.Ξ[:,2], markersize=50, color=:white, strokecolor=:black, strokewidth=3)
+#s = scatter!(ax, gtm.Ξ[:,1], gtm.Ξ[:,2], markersize=50, color=:white, strokecolor=:black, strokewidth=3)
 
-#for i ∈ [1,5,10,15,20,25], j ∈ [1,5,10,15,20,25]
-for i ∈ 1:25, j ∈ 1:25
+for i ∈ 1:k, j ∈ 1:k
     image!(ax, [kx[i]-δ, kx[i]+δ], [ky[j]-δ, ky[j]+δ], reshape(Ψ[:, idx_array[i,j]], 28, 28)[:,end:-1:1], colormap=cmap_wb)
 end
-
 
 fig
 
 save("../figures/gtm-latent-features.png", fig)
+
+
+
 
 
