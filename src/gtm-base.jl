@@ -156,21 +156,13 @@ function fit!(gtm, X; α = 0.1, nepochs=100, tol=1e-3, nconverged=5, verbose=fal
         end
     end
 
-    return converged, llhs, R
+    AIC = 2*length(gtm.W) - 2*llhs[end]
+    BIC = log(size(X,1))*length(gtm.W) - 2*llhs[end]
+    latent_means = (gtm.Ψ*R)'
+
+    return converged, R, llhs, AIC, BIC, latent_means
 end
 
-
-
-
-
-# function exp_normalize(Λ)
-#     maxes = maximum(Λ, dims=1)
-#     res = zeros(size(Λ))
-#     for j in axes(Λ, 2)
-#         res[:,j] .= exp.(Λ[:,j] .- maxes[j])
-#     end
-#     return res, maxes
-# end
 
 
 function DataMeans(gtm, X)
@@ -206,6 +198,7 @@ function DataModes(gtm, X)
     return gtm.Ξ[idx,:]
 end
 
+
 function class_labels(gtm, X)
     mul!(gtm.Ψ, gtm.W, gtm.Φ')
     Δ² = pairwise(sqeuclidean, gtm.Ψ, X', dims=2)
@@ -222,7 +215,6 @@ function class_labels(gtm, X)
     idx = [idx[i][1] for i ∈ 1:length(idx)]
     return idx
 end
-
 
 
 function responsability(gtm, X)

@@ -3,9 +3,8 @@ module GenerativeTopographicMapping
 
 include("gtm-base.jl")
 
- export DataMeans, DataModes
- export responsability, data_reproduction
- export AIC,BIC
+export DataMeans, DataModes
+export responsability, data_reproduction
 using MLJModelInterface
 
 
@@ -25,7 +24,6 @@ function MLJModelInterface.fit(m::GTM, verbosity, Datatable)
     # assume that X is a table
     X = MLJModelInterface.matrix(Datatable)
 
-
     if verbosity > 0
         verbose = true
     else
@@ -37,13 +35,15 @@ function MLJModelInterface.fit(m::GTM, verbosity, Datatable)
     gtm = GTMBase(m.k, m.m, m.s, X; rand_init=m.rand_init)
 
     # 2. Fit the GTM
-    converged,llhs, R = fit!(gtm,
-                             X,
-                             α = m.α,
-                             nepochs=m.nepochs,
-                             tol=m.tol,
-                             verbose=verbose,
-                             )
+    converged, R, llhs, AIC, BIC, latent_means = fit!(
+        gtm,
+        X,
+        α = m.α,
+        nepochs=m.nepochs,
+        tol=m.tol,
+        verbose=verbose,
+    )
+
 
     # 3. Collect results
     cache = nothing
@@ -52,11 +52,12 @@ function MLJModelInterface.fit(m::GTM, verbosity, Datatable)
               :β⁻¹ => gtm.β⁻¹,
               :Φ => gtm.Φ,
               :Ξ => gtm.Ξ,
+              :R => R,
               :llhs => llhs,
               :converged => converged,
-              :AIC => AIC(gtm, X),
-              :BIC => BIC(gtm, X),
-              :latent_means => (gtm.Ψ*R)'
+              :AIC => AIC,
+              :BIC => BIC,
+              :latent_means => latent_means
               )
 
     return (gtm, cache, report)
