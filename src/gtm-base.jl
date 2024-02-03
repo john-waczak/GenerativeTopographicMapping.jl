@@ -2,11 +2,12 @@ using LinearAlgebra
 using Statistics, MultivariateStats
 using Distances
 
-mutable struct GTMBase{T1 <: AbstractArray, T2 <: AbstractArray, T3 <: AbstractArray, T4 <: AbstractArray}
+mutable struct GTMBase{T1 <: AbstractArray, T2 <: AbstractArray, T3 <: AbstractArray, T4 <: AbstractArray, T5 <: AbstractArray}
     Ξ::T1
     M::T2
     Φ::T3
     W::T4
+    Ψ::T5
     β⁻¹::Float64
     σ²::Float64
 end
@@ -60,127 +61,73 @@ function GTMBase(k, m, s, X; rand_init=false)
 
     # 9. Initialize data manifold Ψ using W and Φ
     Ψ = W * Φ'
-    # offset by column means
-    Xmeans = mean(X, dims=1)
-    D = zeros(size(W,1), size(Φ,1))
-    for i ∈ axes(D,1)
-        D[i,:] .= Xmeans[i]
+
+    # add the means back to each row since PCA uses
+    # a mean-subtracted covariance matrix
+    for i ∈ axes(Ψ,1)
+        Ψ[i,:] .= Ψ[i,:] .+ mean(X[:,i])
     end
-
-    Ψ .= Ψ .+ D
-
-    # 10. Set noise variance parameter to largest between
-    #     - 3rd principal component variance
-    #     - 1/2 the average distance between data manifold centers (from Y)
 
     β⁻¹ = max(pca_vars[3], mean(pairwise(sqeuclidean, Ψ, dims=2))/2)
-    pca_vars[3]
 
     # 11. return final GTM object
-
-    return GTMBase(Ξ, M, Φ, W, β⁻¹, σ²)
+    return GTMBase(Ξ, M, Φ, W, Ψ, β⁻¹, σ²)
 end
 
 
 
 
-function exp_normalize(Λ)
-    maxes = maximum(Λ, dims=1)
-    res = zeros(size(Λ))
-    for j in axes(Λ, 2)
-        res[:,j] .= exp.(Λ[:,j] .- maxes[j])
-    end
-    return res, maxes
-end
+function fit!(gtm, X; α = 0.1, nepochs=100, tol=1e-3, nconverged=5, verbose=false)
 
+    # get the needed dimensions
+    N,D = size(X)
+    K = size(gtm.Ξ,1)
+    M = size(gtm.M,1) + 1  # don't forget the bias term!
 
-function getPMatrix(Δ², β⁻¹)
-    # use exp-normalize trick
-    return exp_normalize(-(1/(2*β⁻¹)) .* Δ²)
-end
-
-
-function Responsabilities(P)
-    R = zeros(size(P))
-    for j in axes(R,2)
-        R[:,j] .= P[:,j] ./ sum(P[:,j])
-    end
-    return R
-end
-
-
-
-function getUpdateW(R, G, Φ, X, β⁻¹, α)
-    # W is the solution of
-    # (Φ'GΦ + (αβ⁻¹)I)W' = Φ'RX
-    if α > 0
-        return ((Φ'*G*Φ + (α*β⁻¹)*I)\(Φ'*R*X))'
-    else
-        return ((Φ'*G*Φ)\(Φ'*R*X))'
-    end
-end
-
-
-
-function getUpdateβ⁻¹(R, Δ², X)
-    n_records, n_features = size(X)
-
-    return sum(R .* Δ²)/(n_records*n_features)
-end
-
-
-function loglikelihood(P, Pmaxes, β⁻¹,X)
-    # ugtm uses P instead of Δ² for some reason...
-    # this seemed to cause llh values > 0 on mnist
-
-    N, D = size(X)
-    K, N2 = size(P)
-
-    @assert N == N2
-
-    prexp = (1/(2* β⁻¹* π))^(D/2)
-
-    l = 0.0
-    #l = max(sum(log.((prexp/K) .* sum(P, dims=1))), nextfloat(typemin(1.0)))
-    l = max(sum(log(prexp/K) .+ Pmaxes .+ log.(sum(P, dims=1))), nextfloat(typemin(1.0)))
-    # l = l/N
-    return l
-end
-
-
-
-
-function fit!(gtm, X; α = 0.1, niter=100, tol=0.001, nconverged=5, printiters=false)
-    # 1. create distance matrix Δ² between manifold points and data matrix
-    Ψ = gtm.W * gtm.Φ'
-    Δ² = pairwise(sqeuclidean, Ψ, X', dims=2)
-    # 2. Until convergence, i.e. log-likelihood < tol
+    # set up the prefactor
+    prefac = 0.0
+    Δ² = zeros(K,N)   # K × N
+    P = zeros(K,N)
+    Pmaxes = zeros(1,N)
+    R = zeros(K,N)
+    RX = zeros(K,D)
+    GΦ = zeros(K,M)
+    LHS = zeros(M,M)
+    RHS = zeros(M,D)
 
     l = 0.0
     llh_prev = 0.0
     llhs = Float64[]
-
     nclose = 0
-    converged = false  # a flag to tell us if we converged successfully
-    for i in 1:niter
-        # expectation
-        P, Pmaxes = getPMatrix(Δ², gtm.β⁻¹)
-        R = Responsabilities(P)
-        G = diagm(sum(R, dims=2)[:])
+    converged = false
 
-        # compute log-likelihood
+    for i in 1:nepochs
+        # EXPECTATION
+        mul!(gtm.Ψ, gtm.W, gtm.Φ')                     # update latent node means
+        pairwise!(sqeuclidean, Δ², gtm.Ψ, X', dims=2)  # update distance matrix
+        P .= -(1/(2*gtm.β⁻¹)) .* Δ²                     # compute argument of exponential
+        Pmaxes .= maximum(P, dims=1)                   # compute max for each of the N records
+        Threads.@threads for j in axes(P, 2)
+            P[:,j] .= exp.(P[:,j] .- Pmaxes[j])         # exp-normalize trick
+            R[:,j] .= P[:,j] ./ sum(P[:,j])            # normalize the responasibilities
+        end
+        mul!(GΦ, diagm(sum(R, dims=2)[:]), gtm.Φ)      # update the G matrix diagonal
+        mul!(RX, R, X)                                 # update intermediate for R.H.S
+
+        # UPDATE LOG-LIKELIHOOD
+        log_prefac = log((1/(2* gtm.β⁻¹* π))^(D/2) * (1/K))
         if i == 1
-            l = loglikelihood(P, Pmaxes, gtm.β⁻¹, X)
+            l = max(sum(log_prefac .+ Pmaxes .+ log.(sum(P, dims=1))), nextfloat(typemin(1.0)))
             push!(llhs, l)
         else
             llh_prev = l
-            l = loglikelihood(P, Pmaxes, gtm.β⁻¹, X)
+            l = max(sum(log_prefac .+ Pmaxes .+ log.(sum(P, dims=1))), nextfloat(typemin(1.0)))
             push!(llhs, l)
 
             # check for convergence
-            llh_diff = abs(l - llh_prev)
+            rel_diff = abs(l - llh_prev)/min(abs(l), abs(llh_prev))
 
-            if llh_diff <= tol
+            if rel_diff <= tol
                 # increment the number of "close" difference
                 nclose += 1
             end
@@ -191,43 +138,68 @@ function fit!(gtm, X; α = 0.1, niter=100, tol=0.001, nconverged=5, printiters=f
             end
         end
 
-        # (maximization)
-        gtm.W = getUpdateW(R, G, gtm.Φ, X, gtm.β⁻¹, α)
-        Ψ = gtm.W * gtm.Φ'
-        pairwise!(sqeuclidean, Δ², Ψ, X', dims=2)
-        gtm.β⁻¹ = getUpdateβ⁻¹(R, Δ², X)
 
-        if printiters
+        # MAXIMIZATION
+        mul!(LHS, gtm.Φ', GΦ)                          # update left-hand-side
+        if α > 0
+            LHS[diagind(LHS)] .+= α * gtm.β⁻¹          # add regularization
+        end
+        mul!(RHS, gtm.Φ', RX)                          # update right-hand-side
+
+        gtm.W = (LHS\RHS)'                             # update weights
+        mul!(gtm.Ψ, gtm.W, gtm.Φ')                     # update means
+        pairwise!(sqeuclidean, Δ², gtm.Ψ, X', dims=2)  # update distance matrix
+        gtm.β⁻¹ = sum(R .* Δ²)/(N*D)                    # update variance
+
+        if verbose
             println("iter: $(i), log-likelihood = $(l)")
         end
     end
 
-    # update responsabilities after final pass
-    Ψ = gtm.W * gtm.Φ'
-    Δ² = pairwise(sqeuclidean, Ψ, X', dims=2)
-    P, Pmaxes = getPMatrix(Δ², gtm.β⁻¹)
-    R = Responsabilities(P)
-
-    return converged,llhs, R
+    return converged, llhs, R
 end
 
 
 
+
+
+# function exp_normalize(Λ)
+#     maxes = maximum(Λ, dims=1)
+#     res = zeros(size(Λ))
+#     for j in axes(Λ, 2)
+#         res[:,j] .= exp.(Λ[:,j] .- maxes[j])
+#     end
+#     return res, maxes
+# end
+
+
 function DataMeans(gtm, X)
-    Ψ = gtm.W * gtm.Φ'
-    Δ² = pairwise(sqeuclidean, Ψ, X', dims=2)
-    P, Pmaxes = getPMatrix(Δ², gtm.β⁻¹)
-    R = Responsabilities(P)
+    mul!(gtm.Ψ, gtm.W, gtm.Φ')
+    Δ² = pairwise(sqeuclidean, gtm.Ψ, X', dims=2)
+    P = -(1/(2*gtm.β⁻¹)) .* Δ²
+    R = zeros(size(P))
+
+    Pmaxes = maximum(P, dims=1)
+    Threads.@threads for j in axes(P, 2)
+        P[:,j] .= exp.(P[:,j] .- Pmaxes[j])
+        R[:,j] .= P[:,j] ./ sum(P[:,j])
+    end
 
     return R'*gtm.Ξ
 end
 
 
 function DataModes(gtm, X)
-    Ψ = gtm.W * gtm.Φ'
-    Δ² = pairwise(sqeuclidean, Ψ, X', dims=2)
-    P, Pmaxes = getPMatrix(Δ², gtm.β⁻¹)
-    R = Responsabilities(P)
+    mul!(gtm.Ψ, gtm.W, gtm.Φ')
+    Δ² = pairwise(sqeuclidean, gtm.Ψ, X', dims=2)
+    P = -(1/(2*gtm.β⁻¹)) .* Δ²
+    R = zeros(size(P))
+
+    Pmaxes = maximum(P, dims=1)
+    Threads.@threads for j in axes(P, 2)
+        P[:,j] .= exp.(P[:,j] .- Pmaxes[j])
+        R[:,j] .= P[:,j] ./ sum(P[:,j])
+    end
 
     idx = argmax(R, dims=1)
     idx = [idx[i][1] for i ∈ 1:length(idx)]
@@ -235,10 +207,16 @@ function DataModes(gtm, X)
 end
 
 function class_labels(gtm, X)
-    Ψ = gtm.W * gtm.Φ'
-    Δ² = pairwise(sqeuclidean, Ψ, X', dims=2)
-    P, Pmaxes = getPMatrix(Δ², gtm.β⁻¹)
-    R = Responsabilities(P)
+    mul!(gtm.Ψ, gtm.W, gtm.Φ')
+    Δ² = pairwise(sqeuclidean, gtm.Ψ, X', dims=2)
+    P = -(1/(2*gtm.β⁻¹)) .* Δ²
+    R = zeros(size(P))
+
+    Pmaxes = maximum(P, dims=1)
+    Threads.@threads for j in axes(P, 2)
+        P[:,j] .= exp.(P[:,j] .- Pmaxes[j])
+        R[:,j] .= P[:,j] ./ sum(P[:,j])
+    end
 
     idx = argmax(R, dims=1)
     idx = [idx[i][1] for i ∈ 1:length(idx)]
@@ -248,53 +226,63 @@ end
 
 
 function responsability(gtm, X)
-    # return N × K table of resonsabilities
+    mul!(gtm.Ψ, gtm.W, gtm.Φ')
+    Δ² = pairwise(sqeuclidean, gtm.Ψ, X', dims=2)
+    P = -(1/(2*gtm.β⁻¹)) .* Δ²
+    R = zeros(size(P))
 
-    # 0. get position of latend nodes in data space
-    Ψ = gtm.W * gtm.Φ'
-
-    # 1. create distance matrix
-    Δ² = pairwise(sqeuclidean, Ψ, X', dims=2)
-
-    # 2. create P matrix
-    P = getPMatrix(Δ², gtm.β⁻¹)
-
-    # 3. create R matrix
-    R = Responsabilities(P)
+    Pmaxes = maximum(P, dims=1)
+    Threads.@threads for j in axes(P, 2)
+        P[:,j] .= exp.(P[:,j] .- Pmaxes[j])
+        R[:,j] .= P[:,j] ./ sum(P[:,j])
+    end
 
     return R'
 end
 
 
 
-function data_reconstruction(gtm, X)
-    R = responsability(gtm, X)
-    Ψ = gtm.W * gtm.Φ'
-
-    # compute rmse reproduction error...
-    return R * Ψ'
-end
-
-
-
-
 function BIC(gtm, X)
-    Ψ = gtm.W * gtm.Φ'
-    Δ² = pairwise(sqeuclidean, Ψ, X', dims=2)
-    P, Pmaxes = getPMatrix(Δ², gtm.β⁻¹)
-    R = Responsabilities(P)
-    l = loglikelihood(P, Pmaxes, gtm.β⁻¹, X)
+    K = size(gtm.Ξ,1)
+    D = size(X,2)
+
+    mul!(gtm.Ψ, gtm.W, gtm.Φ')
+    Δ² = pairwise(sqeuclidean, gtm.Ψ, X', dims=2)
+    P = -(1/(2*gtm.β⁻¹)) .* Δ²
+    R = zeros(size(P))
+
+    Pmaxes = maximum(P, dims=1)
+    Threads.@threads for j in axes(P, 2)
+        P[:,j] .= exp.(P[:,j] .- Pmaxes[j])
+        R[:,j] .= P[:,j] ./ sum(P[:,j])
+    end
+
+    # compute log-likelihood
+    log_prefac = log((1/(2* gtm.β⁻¹* π))^(D/2) * (1/K))
+    l = max(sum(log_prefac .+ Pmaxes .+ log.(sum(P, dims=1))), nextfloat(typemin(1.0)))
 
     return log(size(X,1))*length(gtm.W) - 2*l
 end
 
 
 function AIC(gtm, X)
-    Ψ = gtm.W * gtm.Φ'
-    Δ² = pairwise(sqeuclidean, Ψ, X', dims=2)
-    P, Pmaxes = getPMatrix(Δ², gtm.β⁻¹)
-    R = Responsabilities(P)
-    l = loglikelihood(P, Pmaxes, gtm.β⁻¹, X)
+    K = size(gtm.Ξ,1)
+    D = size(X,2)
+
+    mul!(gtm.Ψ, gtm.W, gtm.Φ')
+    Δ² = pairwise(sqeuclidean, gtm.Ψ, X', dims=2)
+    P = -(1/(2*gtm.β⁻¹)) .* Δ²
+    R = zeros(size(P))
+
+    Pmaxes = maximum(P, dims=1)
+    Threads.@threads for j in axes(P, 2)
+        P[:,j] .= exp.(P[:,j] .- Pmaxes[j])
+        R[:,j] .= P[:,j] ./ sum(P[:,j])
+    end
+
+    # compute log-likelihood
+    log_prefac = log((1/(2* gtm.β⁻¹* π))^(D/2) * (1/K))
+    l = max(sum(log_prefac .+ Pmaxes .+ log.(sum(P, dims=1))), nextfloat(typemin(1.0)))
 
     return 2*length(gtm.W) - 2*l
 end

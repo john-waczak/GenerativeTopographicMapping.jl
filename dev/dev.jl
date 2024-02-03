@@ -43,12 +43,11 @@ column_labels = uppercasefirst.(replace.(names(df)[1:4], "."=>" "))
 y = [findfirst(y[i] .== target_labels) for i in axes(y,1)]
 
 # visualize the dataset
-gtm = GTM(k=7, m=2, α=0.1, niter=100, tol=.1)
+gtm = GTM(k=7, m=2, α=0.1, nepochs=100)
 mach = machine(gtm, X)
 fit!(mach)
+
 res = fitted_params(mach)[:gtm]
-
-
 rpt = report(mach)
 llhs = rpt[:llhs]
 Ξ = rpt[:Ξ]
@@ -145,7 +144,7 @@ aics = zeros(length(ks), length(ms))
 for k in ks
     println(k)
     for m in ms
-        gtm = GTM(k=k, m=m, s=0.3, α=0.1, niter=200, tol=.1)
+        gtm = GTM(k=k, m=m, s=0.3, α=0.1, nepochs=200)
         mach = machine(gtm, X)
         fit!(mach, verbosity=0)
         res = fitted_params(mach)[:gtm]
@@ -155,10 +154,9 @@ for k in ks
         aics[k-1,m-1] =  rpt[:AIC]
 
         # compute reconstruction error
-        Δrec[k-1, m-1] = sqrt(mean((rpt[:latent_means] .- Matrix(X)').^2))
+        Δrec[k-1, m-1] = sqrt(mean((rpt[:latent_means] .- Matrix(X)).^2))
     end
 end
-
 
 idx_bic = argmin(bics)
 k_b = ks[idx_bic[1]]
@@ -251,11 +249,12 @@ save("../figures/mnist-samples.png", fig)
 # ------------------------------------
 
 k = 25
-m = 8
+m = 10
 
-gtm = GTM(k=k, m=m, s=0.3, α=0.1, niter=200, tol=.1)
+gtm = GTM(k=k, m=m, s=0.75, α=0.1, nepochs=50)
 mach = machine(gtm, df)
 fit!(mach, verbosity=1)
+
 
 rpt = report(mach)
 res = fitted_params(mach)[:gtm]
@@ -303,9 +302,9 @@ pred_1 = R[1,:]
 
 Ψ = res.W * res.Φ'
 
-idxs = [(i,j) for i in 1:25 for j in 1:25]
+idxs = [(i,j) for i in 1:k for j in 1:k]
 
-idx_array = zeros(Int,25,25)
+idx_array = zeros(Int,k,k)
 for idx in 1:length(idxs)
     i,j = idxs[idx]
     idx_array[i,j] = idx
@@ -327,7 +326,7 @@ end
 
 fig
 
-save("../figures/gtm-latent-features.png", fig)
+save("../figures/gtm-latent-features-s_0.75.png", fig)
 
 
 

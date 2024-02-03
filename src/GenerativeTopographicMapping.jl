@@ -6,7 +6,6 @@ include("gtm-base.jl")
  export DataMeans, DataModes
  export responsability, data_reproduction
  export AIC,BIC
- export data_reconstruction
 using MLJModelInterface
 
 
@@ -15,9 +14,8 @@ MLJModelInterface.@mlj_model mutable struct GTM <: MLJModelInterface.Unsupervise
     m::Int = 4::(_ > 0)
     s::Float64 = 2.0::(_ > 0)
     α::Float64 = 0.1::(_ ≥ 0)
-    batch_size::Int = 256::(_ > 0)
-    niter::Int = 200::(_ ≥ 1)
-    tol::Float64 = 0.1::(_ > 0)
+    nepochs::Int = 100::(_ ≥ 1)
+    tol::Float64 = 1e-3::(_ > 0)
     rand_init::Bool = false::(_ in (false, true))
 end
 
@@ -29,9 +27,9 @@ function MLJModelInterface.fit(m::GTM, verbosity, Datatable)
 
 
     if verbosity > 0
-        printiters = true
+        verbose = true
     else
-        printiters = false
+        verbose = false
     end
 
 
@@ -42,13 +40,10 @@ function MLJModelInterface.fit(m::GTM, verbosity, Datatable)
     converged,llhs, R = fit!(gtm,
                              X,
                              α = m.α,
-                             niter=m.niter,
+                             nepochs=m.nepochs,
                              tol=m.tol,
-                             printiters=printiters
-                             # batch_size = m.batch_size
+                             verbose=verbose,
                              )
-
-    Ψ = gtm.W * gtm.Φ'
 
     # 3. Collect results
     cache = nothing
@@ -61,7 +56,7 @@ function MLJModelInterface.fit(m::GTM, verbosity, Datatable)
               :converged => converged,
               :AIC => AIC(gtm, X),
               :BIC => BIC(gtm, X),
-              :latent_means => Ψ*R
+              :latent_means => (gtm.Ψ*R)'
               )
 
     return (gtm, cache, report)
