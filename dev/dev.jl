@@ -1,3 +1,4 @@
+using LogExpFunctions
 using LinearAlgebra
 using Statistics, MultivariateStats
 using Distances
@@ -5,6 +6,7 @@ using ProgressMeter
 using CSV, DataFrames
 using CairoMakie, MintsMakieRecipes
 using MLJ
+using BenchmarkTools
 
 set_theme!(mints_theme)
 update_theme!(
@@ -43,7 +45,7 @@ column_labels = uppercasefirst.(replace.(names(df)[1:4], "."=>" "))
 y = [findfirst(y[i] .== target_labels) for i in axes(y,1)]
 
 # visualize the dataset
-gtm = GTM(k=7, m=2, α=0.1, nepochs=100, batch_size=16)
+gtm = GTM(k=7, m=2, α=0.1, nepochs=100)
 mach = machine(gtm, X)
 fit!(mach)
 
@@ -255,7 +257,6 @@ m = 10
 gtm = GTM(k=k, m=m, s=0.75, α=0.1, nepochs=50)
 mach = machine(gtm, df)
 fit!(mach, verbosity=1)
-
 
 rpt = report(mach)
 res = fitted_params(mach)[:gtm]

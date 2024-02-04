@@ -1,6 +1,7 @@
 using LinearAlgebra
 using Statistics, MultivariateStats
 using Distances
+using LogExpFunctions
 
 mutable struct GTMBase{T1 <: AbstractArray, T2 <: AbstractArray, T3 <: AbstractArray, T4 <: AbstractArray, T5 <: AbstractArray}
     Ξ::T1
@@ -105,23 +106,21 @@ function fit!(gtm, X; α = 0.1, nepochs=100, tol=1e-3, nconverged=5, verbose=fal
         # EXPECTATION
         mul!(gtm.Ψ, gtm.W, gtm.Φ')                     # update latent node means
         pairwise!(sqeuclidean, Δ², gtm.Ψ, X', dims=2)  # update distance matrix
-        P .= -(1/(2*gtm.β⁻¹)) .* Δ²                     # compute argument of exponential
-        Pmaxes .= maximum(P, dims=1)                   # compute max for each of the N records
-        Threads.@threads for j in axes(P, 2)
-            P[:,j] .= exp.(P[:,j] .- Pmaxes[j])         # exp-normalize trick
-            R[:,j] .= P[:,j] ./ sum(P[:,j])            # normalize the responasibilities
-        end
+        Δ² .*= -(1/(2*gtm.β⁻¹))
+
+        softmax!(R, Δ², dims=1)
+
         mul!(GΦ, diagm(sum(R, dims=2)[:]), gtm.Φ)      # update the G matrix diagonal
         mul!(RX, R, X)                                 # update intermediate for R.H.S
 
         # UPDATE LOG-LIKELIHOOD
         log_prefac = log((1/(2* gtm.β⁻¹* π))^(D/2) * (1/K))
         if i == 1
-            l = max(sum(log_prefac .+ Pmaxes .+ log.(sum(P, dims=1))), nextfloat(typemin(1.0)))
+            l = max(sum(log_prefac .+ logsumexp(Δ², dims=1)), nextfloat(typemin(1.0)))
             push!(llhs, l)
         else
             llh_prev = l
-            l = max(sum(log_prefac .+ Pmaxes .+ log.(sum(P, dims=1))), nextfloat(typemin(1.0)))
+            l = max(sum(log_prefac .+ logsumexp(Δ², dims=1)), nextfloat(typemin(1.0)))
             push!(llhs, l)
 
             # check for convergence
@@ -138,7 +137,6 @@ function fit!(gtm, X; α = 0.1, nepochs=100, tol=1e-3, nconverged=5, verbose=fal
             end
         end
 
-
         # MAXIMIZATION
         mul!(LHS, gtm.Φ', GΦ)                          # update left-hand-side
         if α > 0
@@ -147,6 +145,8 @@ function fit!(gtm, X; α = 0.1, nepochs=100, tol=1e-3, nconverged=5, verbose=fal
         mul!(RHS, gtm.Φ', RX)                          # update right-hand-side
 
         gtm.W = (LHS\RHS)'                             # update weights
+
+
         mul!(gtm.Ψ, gtm.W, gtm.Φ')                     # update means
         pairwise!(sqeuclidean, Δ², gtm.Ψ, X', dims=2)  # update distance matrix
         gtm.β⁻¹ = sum(R .* Δ²)/(N*D)                    # update variance
@@ -168,14 +168,8 @@ end
 function DataMeans(gtm, X)
     mul!(gtm.Ψ, gtm.W, gtm.Φ')
     Δ² = pairwise(sqeuclidean, gtm.Ψ, X', dims=2)
-    P = -(1/(2*gtm.β⁻¹)) .* Δ²
-    R = zeros(size(P))
-
-    Pmaxes = maximum(P, dims=1)
-    Threads.@threads for j in axes(P, 2)
-        P[:,j] .= exp.(P[:,j] .- Pmaxes[j])
-        R[:,j] .= P[:,j] ./ sum(P[:,j])
-    end
+    Δ² .*= -(1/(2*gtm.β⁻¹))
+    R = softmax(Δ², dims=1)
 
     return R'*gtm.Ξ
 end
@@ -184,14 +178,8 @@ end
 function DataModes(gtm, X)
     mul!(gtm.Ψ, gtm.W, gtm.Φ')
     Δ² = pairwise(sqeuclidean, gtm.Ψ, X', dims=2)
-    P = -(1/(2*gtm.β⁻¹)) .* Δ²
-    R = zeros(size(P))
-
-    Pmaxes = maximum(P, dims=1)
-    Threads.@threads for j in axes(P, 2)
-        P[:,j] .= exp.(P[:,j] .- Pmaxes[j])
-        R[:,j] .= P[:,j] ./ sum(P[:,j])
-    end
+    Δ² .*= -(1/(2*gtm.β⁻¹))
+    R = softmax(Δ², dims=1)
 
     idx = argmax(R, dims=1)
     idx = [idx[i][1] for i ∈ 1:length(idx)]
@@ -202,14 +190,8 @@ end
 function class_labels(gtm, X)
     mul!(gtm.Ψ, gtm.W, gtm.Φ')
     Δ² = pairwise(sqeuclidean, gtm.Ψ, X', dims=2)
-    P = -(1/(2*gtm.β⁻¹)) .* Δ²
-    R = zeros(size(P))
-
-    Pmaxes = maximum(P, dims=1)
-    Threads.@threads for j in axes(P, 2)
-        P[:,j] .= exp.(P[:,j] .- Pmaxes[j])
-        R[:,j] .= P[:,j] ./ sum(P[:,j])
-    end
+    Δ² .*= -(1/(2*gtm.β⁻¹))
+    R = softmax(Δ², dims=1)
 
     idx = argmax(R, dims=1)
     idx = [idx[i][1] for i ∈ 1:length(idx)]
@@ -220,61 +202,10 @@ end
 function responsability(gtm, X)
     mul!(gtm.Ψ, gtm.W, gtm.Φ')
     Δ² = pairwise(sqeuclidean, gtm.Ψ, X', dims=2)
-    P = -(1/(2*gtm.β⁻¹)) .* Δ²
-    R = zeros(size(P))
-
-    Pmaxes = maximum(P, dims=1)
-    Threads.@threads for j in axes(P, 2)
-        P[:,j] .= exp.(P[:,j] .- Pmaxes[j])
-        R[:,j] .= P[:,j] ./ sum(P[:,j])
-    end
+    Δ² .*= -(1/(2*gtm.β⁻¹))
+    R = softmax(Δ², dims=1)
 
     return R'
 end
 
 
-
-function BIC(gtm, X)
-    K = size(gtm.Ξ,1)
-    D = size(X,2)
-
-    mul!(gtm.Ψ, gtm.W, gtm.Φ')
-    Δ² = pairwise(sqeuclidean, gtm.Ψ, X', dims=2)
-    P = -(1/(2*gtm.β⁻¹)) .* Δ²
-    R = zeros(size(P))
-
-    Pmaxes = maximum(P, dims=1)
-    Threads.@threads for j in axes(P, 2)
-        P[:,j] .= exp.(P[:,j] .- Pmaxes[j])
-        R[:,j] .= P[:,j] ./ sum(P[:,j])
-    end
-
-    # compute log-likelihood
-    log_prefac = log((1/(2* gtm.β⁻¹* π))^(D/2) * (1/K))
-    l = max(sum(log_prefac .+ Pmaxes .+ log.(sum(P, dims=1))), nextfloat(typemin(1.0)))
-
-    return log(size(X,1))*length(gtm.W) - 2*l
-end
-
-
-function AIC(gtm, X)
-    K = size(gtm.Ξ,1)
-    D = size(X,2)
-
-    mul!(gtm.Ψ, gtm.W, gtm.Φ')
-    Δ² = pairwise(sqeuclidean, gtm.Ψ, X', dims=2)
-    P = -(1/(2*gtm.β⁻¹)) .* Δ²
-    R = zeros(size(P))
-
-    Pmaxes = maximum(P, dims=1)
-    Threads.@threads for j in axes(P, 2)
-        P[:,j] .= exp.(P[:,j] .- Pmaxes[j])
-        R[:,j] .= P[:,j] ./ sum(P[:,j])
-    end
-
-    # compute log-likelihood
-    log_prefac = log((1/(2* gtm.β⁻¹* π))^(D/2) * (1/K))
-    l = max(sum(log_prefac .+ Pmaxes .+ log.(sum(P, dims=1))), nextfloat(typemin(1.0)))
-
-    return 2*length(gtm.W) - 2*l
-end
