@@ -10,7 +10,6 @@ mutable struct GTMBase{T1 <: AbstractArray, T2 <: AbstractArray, T3 <: AbstractA
     W::T4
     Ψ::T5
     β⁻¹::Float64
-    σ²::Float64
 end
 
 
@@ -29,13 +28,13 @@ function GTMBase(k, m, s, X; rand_init=false)
     M = hcat([μ[i] for i in axes(μ,1) for j in axes(μ,1)],[μ[j] for i in axes(μ,1) for j in axes(μ,1)])
 
     # 4. initialize rbf width
-    σ² = s * abs(μ[2]-μ[1])
+    σ = s * abs(μ[2]-μ[1])
 
     # 5. create rbf activation matrix Φ
     Φ = ones(n_nodes, n_rbf_centers+1)
     let
         Δ² = pairwise(sqeuclidean, Ξ, M, dims=1)
-        Φ[:, 1:end-1] .= exp.(-Δ² ./ (2*σ²) )
+        Φ[:, 1:end-1] .= exp.(-Δ² ./ (2*σ^2))
     end
 
     # 6. perform PCA on data
@@ -72,7 +71,7 @@ function GTMBase(k, m, s, X; rand_init=false)
     β⁻¹ = max(pca_vars[3], mean(pairwise(sqeuclidean, Ψ, dims=2))/2)
 
     # 11. return final GTM object
-    return GTMBase(Ξ, M, Φ, W, Ψ, β⁻¹, σ²)
+    return GTMBase(Ξ, M, Φ, W, Ψ, β⁻¹)
 end
 
 
