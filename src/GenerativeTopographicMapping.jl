@@ -44,28 +44,38 @@ function MLJModelInterface.fit(m::GTM, verbosity, Datatable)
     gtm = GTMBase(m.k, m.m, m.s, X; rand_init=m.rand_init)
 
     # 2. Fit the GTM
-    if batchsize == 0
-        converged, llhs, AIC, BIC, latent_means = fit!(
-            gtm,
-            X,
-            α = m.α,
-            nepochs=m.nepochs,
-            tol=m.tol,
-            nconverged=m.nconverged,
-            verbose=verbose,
-        )
-    else
-        converged, llhs, AIC, BIC, latent_means = fit_incremental!(
-            gtm,
-            X,
-            α = m.α,
-            nepochs=m.nepochs,
-            batchsize=batchsize,
-            tol=m.tol,
-            nconverged=m.nconverged,
-            verbose=verbose,
-        )
-    end
+    converged, llhs, AIC, BIC, latent_means = fit!(
+        gtm,
+        X,
+        α = m.α,
+        nepochs=m.nepochs,
+        tol=m.tol,
+        nconverged=m.nconverged,
+        verbose=verbose,
+    )
+
+    # if batchsize == 0
+    #     converged, llhs, AIC, BIC, latent_means = fit!(
+    #         gtm,
+    #         X,
+    #         α = m.α,
+    #         nepochs=m.nepochs,
+    #         tol=m.tol,
+    #         nconverged=m.nconverged,
+    #         verbose=verbose,
+    #     )
+    # else
+    #     converged, llhs, AIC, BIC, latent_means = fit_incremental!(
+    #         gtm,
+    #         X,
+    #         α = m.α,
+    #         nepochs=m.nepochs,
+    #         batchsize=batchsize,
+    #         tol=m.tol,
+    #         nconverged=m.nconverged,
+    #         verbose=verbose,
+    #     )
+    # end
 
     # 3. Collect results
     cache = nothing
