@@ -69,6 +69,11 @@ means = MLJ.transform(mach, X)
 mode_idxs = MLJ.predict(mach, X)
 modes = DataModes(res, Matrix(X))
 
+typeof(mach)
+
+Rs = predict_responsibility(mach, X)
+
+
 pca = fit(PCA, Matrix(X)', maxoutdim=3, pratio=0.99999)
 Xpca = MultivariateStats.predict(pca, Matrix(X)')'
 
@@ -299,7 +304,7 @@ save("../figures/mnist-gtm.png", fig)
 
 
 
-R = responsability(res, X)
+R = responsibility(res, X)
 pred_1 = R[1,:]
 
 

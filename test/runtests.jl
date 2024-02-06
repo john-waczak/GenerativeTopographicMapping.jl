@@ -92,6 +92,8 @@ end
     classes = MLJBase.predict(m, X)
     @assert length(y) == 100
 
+    Resp = predict_responsibility(m, X)
+
     fp = fitted_params(m)
     @test Set([:gtm]) == Set(keys(fp))
 

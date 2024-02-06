@@ -4,9 +4,11 @@ module GenerativeTopographicMapping
 include("gtm-base.jl")
 
 export DataMeans, DataModes
-export responsability, data_reproduction
-using MLJModelInterface
+export responsibility, data_reproduction
 
+using MLJModelInterface
+import MLJBase
+export predict_responsibility
 
 MLJModelInterface.@mlj_model mutable struct GTM <: MLJModelInterface.Unsupervised
     k::Int = 16::(_ > 0)
@@ -30,7 +32,7 @@ function MLJModelInterface.fit(m::GTM, verbosity, Datatable)
     if batchsize ≥ size(X,1)
         println("Batch size is ≥ number of records. Setting batch size to n records...")
         batchsize=0
-    end
+    end 
 
 
     if verbosity > 0
@@ -118,6 +120,12 @@ end
 
 
 
+function predict_responsibility(m::MLJBase.Machine{GTM, true}, Data_new)
+    Xnew = MLJModelInterface.matrix(Data_new)
+    gtm = fitted_params(m)[:gtm]
+    return responsibility(gtm, Xnew)
+end
+
 
 MLJModelInterface.metadata_pkg.(
     GTM,
@@ -173,8 +181,8 @@ Train the machine with `fit!(mach, rows=...)`.
 - `rand_init=false`: Whether or not to randomly initialize weight matrix `W`. If false, `W` is initialized using first two principal components of the dataset.
 
 # Operations
-- `transform(mach, X)`: returns the coordinates `ξ₁` and `ξ₂` cooresponding to the mean of the latent node responsability distribution.
-- `predict(mach, X)`: returns the index of the node corresponding to the mode of the latent node responsability distribution.
+- `transform(mach, X)`: returns the coordinates `ξ₁` and `ξ₂` cooresponding to the mean of the latent node responsibility distribution.
+- `predict(mach, X)`: returns the index of the node corresponding to the mode of the latent node responsibility distribution.
 
 # Fitted parameters
 The fields of `fitted_params(mach)` are:

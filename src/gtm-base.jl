@@ -275,12 +275,6 @@ end
 
 
 
-
-
-
-
-
-
 function DataMeans(gtm, X)
     mul!(gtm.Ψ, gtm.W, gtm.Φ')
     Δ² = pairwise(sqeuclidean, gtm.Ψ, X', dims=2)
@@ -315,7 +309,7 @@ function class_labels(gtm, X)
 end
 
 
-function responsability(gtm, X)
+function responsibility(gtm, X)
     mul!(gtm.Ψ, gtm.W, gtm.Φ')
     Δ² = pairwise(sqeuclidean, gtm.Ψ, X', dims=2)
     Δ² .*= -(1/(2*gtm.β⁻¹))
