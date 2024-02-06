@@ -14,7 +14,9 @@ MLJModelInterface.@mlj_model mutable struct GTM <: MLJModelInterface.Unsupervise
     s::Float64 = 2.0::(_ > 0)
     α::Float64 = 0.1::(_ ≥ 0)
     nepochs::Int = 100::(_ ≥ 1)
+    batchsize::Int = 0::(_ ≥ 0)
     tol::Float64 = 1e-3::(_ > 0)
+    nconverged::Int = 4::(_ ≥ 1)
     rand_init::Bool = false::(_ in (false, true))
 end
 
@@ -23,6 +25,13 @@ end
 function MLJModelInterface.fit(m::GTM, verbosity, Datatable)
     # assume that X is a table
     X = MLJModelInterface.matrix(Datatable)
+
+    batchsize = m.batchsize
+    if batchsize ≥ size(X,1)
+        println("Batch size is ≥ number of records. Setting batch size to n records...")
+        batchsize=0
+    end
+
 
     if verbosity > 0
         verbose = true
@@ -35,15 +44,28 @@ function MLJModelInterface.fit(m::GTM, verbosity, Datatable)
     gtm = GTMBase(m.k, m.m, m.s, X; rand_init=m.rand_init)
 
     # 2. Fit the GTM
-    converged, R, llhs, AIC, BIC, latent_means = fit!(
-        gtm,
-        X,
-        α = m.α,
-        nepochs=m.nepochs,
-        tol=m.tol,
-        verbose=verbose,
-    )
-
+    if batchsize == 0
+        converged, llhs, AIC, BIC, latent_means = fit!(
+            gtm,
+            X,
+            α = m.α,
+            nepochs=m.nepochs,
+            tol=m.tol,
+            nconverged=m.nconverged,
+            verbose=verbose,
+        )
+    else
+        converged, llhs, AIC, BIC, latent_means = fit_incremental!(
+            gtm,
+            X,
+            α = m.α,
+            nepochs=m.nepochs,
+            batchsize=batchsize,
+            tol=m.tol,
+            nconverged=m.nconverged,
+            verbose=verbose,
+        )
+    end
 
     # 3. Collect results
     cache = nothing
@@ -52,7 +74,6 @@ function MLJModelInterface.fit(m::GTM, verbosity, Datatable)
               :β⁻¹ => gtm.β⁻¹,
               :Φ => gtm.Φ,
               :Ξ => gtm.Ξ,
-              :R => R,
               :llhs => llhs,
               :converged => converged,
               :AIC => AIC,

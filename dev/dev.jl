@@ -8,6 +8,13 @@ using CairoMakie, MintsMakieRecipes
 using MLJ
 using BenchmarkTools
 
+
+# R = rand(25*25, 60_000)
+# X = rand(60_000, 28*28)
+# @btime R*X  # 147 ms
+# @btime sum(R .* R)  # 139 ms
+
+
 set_theme!(mints_theme)
 update_theme!(
     figure_padding=30,
@@ -30,8 +37,6 @@ using .GenerativeTopographicMapping
 
 
 
-
-
 # Demo 1: iris dataset
 
 # load iris datset that we can use to validate the code
@@ -45,15 +50,27 @@ column_labels = uppercasefirst.(replace.(names(df)[1:4], "."=>" "))
 y = [findfirst(y[i] .== target_labels) for i in axes(y,1)]
 
 # visualize the dataset
-gtm = GTM(k=7, m=2, α=0.1, nepochs=100)
+#gtm = GTM(k=7, m=2, α=0.1, nepochs=100)
+gtm = GTM(k=7, m=2, s=1.0, α=0.1, tol=1e-5, nepochs=100)
 mach = machine(gtm, X)
 fit!(mach)
+
+
+rpt = report(mach)
+println(rpt[:β⁻¹])
+gtm = GTM(k=7, m=2, s=1.0, α=0.1, nepochs=100, tol=1e-5, batchsize=16)
+mach = machine(gtm, X)
+fit!(mach)
+
 
 
 res = fitted_params(mach)[:gtm]
 rpt = report(mach)
 llhs = rpt[:llhs]
 Ξ = rpt[:Ξ]
+
+println(rpt[:β⁻¹])
+
 
 fig = Figure();
 ax = Axis(fig[1,1], xlabel="iteration", ylabel="log-likelihood")
@@ -254,9 +271,14 @@ save("../figures/mnist-samples.png", fig)
 k = 25
 m = 10
 
-gtm = GTM(k=k, m=m, s=0.75, α=0.1, nepochs=50)
+#gtm = GTM(k=k, m=m, s=0.75, α=0.1, nepochs=50)
+gtm = GTM(k=k, m=m, s=1.0, α=0.1, nepochs=100, batchsize=128)
+
 mach = machine(gtm, df)
 fit!(mach, verbosity=1)
+
+
+
 
 rpt = report(mach)
 res = fitted_params(mach)[:gtm]
@@ -267,13 +289,11 @@ llhs = rpt[:llhs]
 #lines!(ax, 1:length(llhs), llhs, linewidth=5)
 #fig
 
-
 # digit_means = DataMeans(gtm, X)
 # digit_modes = DataModes(gtm, X)
 
 digit_means = MLJ.transform(mach, df)
 digit_modes = modes = DataModes(res, X)
-
 
 
 pca = MultivariateStats.fit(PCA, X', maxoutdim=3, pratio=0.99999);

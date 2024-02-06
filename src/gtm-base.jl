@@ -2,13 +2,16 @@ using LinearAlgebra
 using Statistics, MultivariateStats
 using Distances
 using LogExpFunctions
+using ProgressMeter
 
-mutable struct GTMBase{T1 <: AbstractArray, T2 <: AbstractArray, T3 <: AbstractArray, T4 <: AbstractArray, T5 <: AbstractArray}
+mutable struct GTMBase{T1 <: AbstractArray, T2 <: AbstractArray, T3 <: AbstractArray, T4 <: AbstractArray, T5 <: AbstractArray, T6 <: AbstractArray, T7 <: AbstractArray}
     Ξ::T1
     M::T2
     Φ::T3
     W::T4
     Ψ::T5
+    Δ²::T6
+    R::T7
     β⁻¹::Float64
 end
 
@@ -71,10 +74,8 @@ function GTMBase(k, m, s, X; rand_init=false)
     β⁻¹ = max(pca_vars[3], mean(pairwise(sqeuclidean, Ψ, dims=2))/2)
 
     # 11. return final GTM object
-    return GTMBase(Ξ, M, Φ, W, Ψ, β⁻¹)
+    return GTMBase(Ξ, M, Φ, W, Ψ, zeros(n_nodes, n_records), (1/n_nodes) .* ones(n_nodes, n_records), β⁻¹)
 end
-
-
 
 
 function fit!(gtm, X; α = 0.1, nepochs=100, tol=1e-3, nconverged=5, verbose=false)
@@ -86,10 +87,6 @@ function fit!(gtm, X; α = 0.1, nepochs=100, tol=1e-3, nconverged=5, verbose=fal
 
     # set up the prefactor
     prefac = 0.0
-    Δ² = zeros(K,N)   # K × N
-    P = zeros(K,N)
-    Pmaxes = zeros(1,N)
-    R = zeros(K,N)
     RX = zeros(K,D)
     GΦ = zeros(K,M)
     LHS = zeros(M,M)
@@ -104,22 +101,22 @@ function fit!(gtm, X; α = 0.1, nepochs=100, tol=1e-3, nconverged=5, verbose=fal
     for i in 1:nepochs
         # EXPECTATION
         mul!(gtm.Ψ, gtm.W, gtm.Φ')                     # update latent node means
-        pairwise!(sqeuclidean, Δ², gtm.Ψ, X', dims=2)  # update distance matrix
-        Δ² .*= -(1/(2*gtm.β⁻¹))
+        pairwise!(sqeuclidean, gtm.Δ², gtm.Ψ, X', dims=2)  # update distance matrix
+        gtm.Δ² .*= -(1/(2*gtm.β⁻¹))
 
-        softmax!(R, Δ², dims=1)
+        softmax!(gtm.R, gtm.Δ², dims=1)
 
-        mul!(GΦ, diagm(sum(R, dims=2)[:]), gtm.Φ)      # update the G matrix diagonal
-        mul!(RX, R, X)                                 # update intermediate for R.H.S
+        mul!(GΦ, diagm(sum(gtm.R, dims=2)[:]), gtm.Φ)      # update the G matrix diagonal
+        mul!(RX, gtm.R, X)                                 # update intermediate for R.H.S
 
         # UPDATE LOG-LIKELIHOOD
         log_prefac = log((1/(2* gtm.β⁻¹* π))^(D/2) * (1/K))
         if i == 1
-            l = max(sum(log_prefac .+ logsumexp(Δ², dims=1)), nextfloat(typemin(1.0)))
+            l = max(sum(log_prefac .+ logsumexp(gtm.Δ², dims=1)), nextfloat(typemin(1.0)))
             push!(llhs, l)
         else
             llh_prev = l
-            l = max(sum(log_prefac .+ logsumexp(Δ², dims=1)), nextfloat(typemin(1.0)))
+            l = max(sum(log_prefac .+ logsumexp(gtm.Δ², dims=1)), nextfloat(typemin(1.0)))
             push!(llhs, l)
 
             # check for convergence
@@ -137,18 +134,17 @@ function fit!(gtm, X; α = 0.1, nepochs=100, tol=1e-3, nconverged=5, verbose=fal
         end
 
         # MAXIMIZATION
-        mul!(LHS, gtm.Φ', GΦ)                          # update left-hand-side
+        mul!(LHS, gtm.Φ', GΦ)                              # update left-hand-side
         if α > 0
-            LHS[diagind(LHS)] .+= α * gtm.β⁻¹          # add regularization
+            LHS[diagind(LHS)] .+= α * gtm.β⁻¹               # add regularization
         end
-        mul!(RHS, gtm.Φ', RX)                          # update right-hand-side
+        mul!(RHS, gtm.Φ', RX)                              # update right-hand-side
 
-        gtm.W = (LHS\RHS)'                             # update weights
+        gtm.W = (LHS\RHS)'                                 # update weights
 
-
-        mul!(gtm.Ψ, gtm.W, gtm.Φ')                     # update means
-        pairwise!(sqeuclidean, Δ², gtm.Ψ, X', dims=2)  # update distance matrix
-        gtm.β⁻¹ = sum(R .* Δ²)/(N*D)                    # update variance
+        mul!(gtm.Ψ, gtm.W, gtm.Φ')                         # update means
+        pairwise!(sqeuclidean, gtm.Δ², gtm.Ψ, X', dims=2)  # update distance matrix
+        gtm.β⁻¹ = sum(gtm.R .* gtm.Δ²)/(N*D)                    # update variance
 
         if verbose
             println("iter: $(i), log-likelihood = $(l)")
@@ -157,10 +153,131 @@ function fit!(gtm, X; α = 0.1, nepochs=100, tol=1e-3, nconverged=5, verbose=fal
 
     AIC = 2*length(gtm.W) - 2*llhs[end]
     BIC = log(size(X,1))*length(gtm.W) - 2*llhs[end]
-    latent_means = (gtm.Ψ*R)'
+    latent_means = (gtm.Ψ*gtm.R)'
 
-    return converged, R, llhs, AIC, BIC, latent_means
+    return converged, llhs, AIC, BIC, latent_means
 end
+
+
+function get_batches(batchsize, N)
+    idxs = [i for i in range(1, step=batchsize, stop=N)]
+    if idxs[end] < N
+        push!(idxs, N)
+    end
+    idx_batches = [idxs[i]:idxs[i+1] for i ∈ 1:length(idxs)-1]
+end
+
+
+function fit_incremental!(gtm, X; α = 0.1, nepochs=100, batchsize=32, tol=1e-3, nconverged=5, verbose=false)
+
+    # get the needed dimensions
+    N,D = size(X)
+    K = size(gtm.Ξ,1)
+    M = size(gtm.M,1) + 1  # don't forget the bias term!
+
+    # set up the prefactor
+    prefac = 0.0
+
+    #GΦ = diagm(sum(gtm.R, dims=2)[:]) * gtm.Φ
+    G = diagm(sum(gtm.R, dims=2)[:])
+    RX = gtm.R*X
+    LHS = zeros(M,M)
+    RHS = zeros(M,D)
+
+    l = 0.0
+    llh_prev = 0.0
+    llhs = Float64[]
+    nclose = 0
+    converged = false
+
+    idx_batches = get_batches(batchsize, N)
+
+    for i in 1:nepochs
+        @showprogress for idx_batch in idx_batches
+            Nbatch = length(idx_batch)
+
+            # set up array views
+            Xb = @view X[idx_batch, :]
+            Δ²_b = @view gtm.Δ²[:, idx_batch]
+            Rb_old = gtm.R[:, idx_batch]
+            Rb = @view gtm.R[:, idx_batch]
+
+            # expectation step
+            mul!(gtm.Ψ, gtm.W, gtm.Φ')
+
+            pairwise!(sqeuclidean, Δ²_b, gtm.Ψ, Xb', dims=2)
+            softmax!(Rb, -(1/(2*gtm.β⁻¹)) .* Δ²_b, dims=1)
+
+            #mul!(GΦ, diagm(sum(gtm.R, dims=2)[:]), gtm.Φ)      # update the G matrix diagonal
+            #mul!(RX, gtm.R, X)                                 # update intermediate for R.H.S
+
+            G[diagind(G)] += sum(Rb - Rb_old, dims=2)
+            RX +=  (Rb .- Rb_old)*Xb                            # update intermediate for R.H.S
+
+
+            # MAXIMIZATION
+            #mul!(LHS, gtm.Φ', GΦ)                              # update left-hand-side
+            mul!(LHS, gtm.Φ', G*gtm.Φ)                              # update left-hand-side
+            if α > 0
+                LHS[diagind(LHS)] .+= α * gtm.β⁻¹               # add regularization
+            end
+
+            mul!(RHS, gtm.Φ', RX)                              # update right-hand-side
+
+            gtm.W = (LHS\RHS)'
+
+            Δ²_b_old = copy(Δ²_b)
+            mul!(gtm.Ψ, gtm.W, gtm.Φ')
+            pairwise!(sqeuclidean, Δ²_b, gtm.Ψ, Xb', dims=2)
+
+            gtm.β⁻¹ = sum(gtm.R .* gtm.Δ²)/(N*D)                    # update variance
+
+            # gtm.β⁻¹ = gtm.β⁻¹ + sum(Rb .* Δ²_b)/(N*D) - sum(Rb_old .* Δ²_b_old)/(N*D)  # update variance
+
+            # gtm.β⁻¹ += sum((Rb .- Rb_old) .* Δ²_b)/(Nbatch*D)
+        end
+
+        # UPDATE LOG-LIKELIHOOD
+        log_prefac = log((1/(2* gtm.β⁻¹* π))^(D/2) * (1/K))
+        if i == 1
+            l = max(sum(log_prefac .+ logsumexp(-(1/(2*gtm.β⁻¹)) .* gtm.Δ², dims=1)), nextfloat(typemin(1.0)))
+            push!(llhs, l)
+        else
+            llh_prev = l
+            l = max(sum(log_prefac .+ logsumexp(-(1/(2*gtm.β⁻¹)) .* gtm.Δ², dims=1)), nextfloat(typemin(1.0)))
+            push!(llhs, l)
+
+            # check for convergence
+            rel_diff = abs(l - llh_prev)/min(abs(l), abs(llh_prev))
+
+            if rel_diff <= tol
+                # increment the number of "close" difference
+                nclose += 1
+            end
+
+            if nclose == nconverged
+                converged = true
+                break
+            end
+        end
+
+        if verbose
+            println("iter: $(i), log-likelihood = $(l)")
+        end
+    end
+
+    AIC = 2*length(gtm.W) - 2*llhs[end]
+    BIC = log(size(X,1))*length(gtm.W) - 2*llhs[end]
+    latent_means = (gtm.Ψ*gtm.R)'
+
+    return converged, llhs, AIC, BIC, latent_means
+end
+
+
+
+
+
+
 
 
 
