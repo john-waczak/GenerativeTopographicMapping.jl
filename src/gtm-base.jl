@@ -110,7 +110,8 @@ function fit!(gtm, X; α = 0.1, nepochs=100, tol=1e-3, nconverged=5, verbose=fal
         mul!(RX, gtm.R, X)                                 # update intermediate for R.H.S
 
         # UPDATE LOG-LIKELIHOOD
-        log_prefac = log((1/(2* gtm.β⁻¹* π))^(D/2) * (1/K))
+        log_prefac = (D/2)*log(1/(2* gtm.β⁻¹* π)) + log(1/K)
+
         if i == 1
             l = max(sum(log_prefac .+ logsumexp(gtm.Δ², dims=1)), nextfloat(typemin(1.0)))
             push!(llhs, l)

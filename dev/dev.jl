@@ -222,9 +222,13 @@ targets = trainset.targets
 size(trainset.features)
 
 img_shape = size(trainset.features)[1:2]
-X = reshape(trainset.features, 28*28, size(trainset.features,3))'
+X = collect(reshape(trainset.features, 28*28, size(trainset.features,3))')
+
 headers = [Symbol("x_$(i)") for i in 1:28*28]
 df = table(X, names=headers)
+
+
+
 
 n_digits = 10
 
