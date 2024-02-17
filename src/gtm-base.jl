@@ -154,9 +154,8 @@ function fit!(gtm, X; α = 0.1, nepochs=100, tol=1e-3, nconverged=5, verbose=fal
 
     AIC = 2*length(gtm.W) - 2*llhs[end]
     BIC = log(size(X,1))*length(gtm.W) - 2*llhs[end]
-    latent_means = (gtm.Ψ*gtm.R)'
 
-    return converged, llhs, AIC, BIC, latent_means
+    return converged, llhs, AIC, BIC
 end
 
 
@@ -169,6 +168,9 @@ function get_batches(batchsize, N)
 end
 
 
+
+
+# TODO: Fix me!
 function fit_incremental!(gtm, X; α = 0.1, nepochs=100, batchsize=32, tol=1e-3, nconverged=5, verbose=false)
 
     # get the needed dimensions
@@ -269,9 +271,8 @@ function fit_incremental!(gtm, X; α = 0.1, nepochs=100, batchsize=32, tol=1e-3,
 
     AIC = 2*length(gtm.W) - 2*llhs[end]
     BIC = log(size(X,1))*length(gtm.W) - 2*llhs[end]
-    latent_means = (gtm.Ψ*gtm.R)'
 
-    return converged, llhs, AIC, BIC, latent_means
+    return converged, llhs, AIC, BIC
 end
 
 

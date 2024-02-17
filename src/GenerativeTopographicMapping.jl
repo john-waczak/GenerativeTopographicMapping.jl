@@ -32,7 +32,7 @@ function MLJModelInterface.fit(m::GTM, verbosity, Datatable)
     if batchsize ≥ size(X,1)
         println("Batch size is ≥ number of records. Setting batch size to n records...")
         batchsize=0
-    end 
+    end
 
 
     if verbosity > 0
@@ -46,7 +46,7 @@ function MLJModelInterface.fit(m::GTM, verbosity, Datatable)
     gtm = GTMBase(m.k, m.m, m.s, X; rand_init=m.rand_init)
 
     # 2. Fit the GTM
-    converged, llhs, AIC, BIC, latent_means = fit!(
+    converged, llhs, AIC, BIC = fit!(
         gtm,
         X,
         α = m.α,
@@ -57,7 +57,7 @@ function MLJModelInterface.fit(m::GTM, verbosity, Datatable)
     )
 
     # if batchsize == 0
-    #     converged, llhs, AIC, BIC, latent_means = fit!(
+    #     converged, llhs, AIC, BIC  = fit!(
     #         gtm,
     #         X,
     #         α = m.α,
@@ -67,7 +67,7 @@ function MLJModelInterface.fit(m::GTM, verbosity, Datatable)
     #         verbose=verbose,
     #     )
     # else
-    #     converged, llhs, AIC, BIC, latent_means = fit_incremental!(
+    #     converged, llhs, AIC, BIC = fit_incremental!(
     #         gtm,
     #         X,
     #         α = m.α,
@@ -90,7 +90,6 @@ function MLJModelInterface.fit(m::GTM, verbosity, Datatable)
               :converged => converged,
               :AIC => AIC,
               :BIC => BIC,
-              :latent_means => latent_means
               )
 
     return (gtm, cache, report)
@@ -200,8 +199,6 @@ The fields of `report(mach)` are:
 - `converged`: is `true` if the convergence critera were met before reaching `niter`
 - `AIC`: the Aikike Information Criterion
 - `BIC`: the Bayesian Information Criterion
-- `latent_means`: The representation of the means of the projected nodes in the data space. These can be viewed as the learned feature vectors for each node.
-
 
 # Examples
 ```

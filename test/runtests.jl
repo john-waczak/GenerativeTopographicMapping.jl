@@ -71,7 +71,7 @@ end
 
 
     gtm = GenerativeTopographicMapping.GTMBase(k,m,s,X)
-    converged, llhs, AIC, BIC, latent_means = GenerativeTopographicMapping.fit!(gtm, X; tol=0.1, nconverged=4)
+    converged, llhs, AIC, BIC = GenerativeTopographicMapping.fit!(gtm, X; tol=0.1, nconverged=4)
     @assert converged == true
     @test size(gtm.R) == (n_nodes, n_datapoints)
     @test all(colsum ≈ 1 for colsum ∈ sum(gtm.R, dims=1))
@@ -98,6 +98,6 @@ end
     @test Set([:gtm]) == Set(keys(fp))
 
     rpt = report(m)
-    @test Set([:W, :β⁻¹, :Φ, :Ξ, :llhs, :converged, :AIC, :BIC, :latent_means]) == Set(keys(rpt))
+    @test Set([:W, :β⁻¹, :Φ, :Ξ, :llhs, :converged, :AIC, :BIC]) == Set(keys(rpt))
 end
 
