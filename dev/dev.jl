@@ -147,7 +147,7 @@ ms = 2:1:15
 
 bics = zeros(length(ks), length(ms))
 aics = zeros(length(ks), length(ms))
-Δrec = zeros(length(ks), length(ms))
+# Δrec = zeros(length(ks), length(ms))
 
 
 for k in ks
@@ -163,7 +163,7 @@ for k in ks
         aics[k-1,m-1] =  rpt[:AIC]
 
         # compute reconstruction error
-        Δrec[k-1, m-1] = sqrt(mean((rpt[:latent_means] .- Matrix(X)).^2))
+        # Δrec[k-1, m-1] = sqrt(mean((rpt[:latent_means] .- Matrix(X)).^2))
     end
 end
 
@@ -175,9 +175,9 @@ idx_aic = argmin(aics)
 k_a = ks[idx_aic[1]]
 m_a = ks[idx_aic[2]]
 
-idx_Δ = argmin(Δrec)
-k_Δ = ks[idx_Δ[1]]
-m_Δ = ks[idx_Δ[2]]
+# idx_Δ = argmin(Δrec)
+# k_Δ = ks[idx_Δ[1]]
+# m_Δ = ks[idx_Δ[2]]
 
 
 fig = Figure();
@@ -202,14 +202,14 @@ fig
 save("../figures/iris-aic.png", fig)
 
 
-fig = Figure();
-ax = Axis(fig[1,1], xlabel="k", ylabel="m", title="Reconstruction RMSE")
-h = heatmap!(ax, ks, ms, Δrec, colorscale=log10)
-s = scatter!(ax, Point2f(k_Δ, m_Δ), marker = :star5, markersize=25, color=:white, strokecolor=:gray, strokewidth=1)
-axislegend(ax, [s], ["minimum value (k = $(k_Δ), m = $(m_Δ))"])
-fig
+# fig = Figure();
+# ax = Axis(fig[1,1], xlabel="k", ylabel="m", title="Reconstruction RMSE")
+# h = heatmap!(ax, ks, ms, Δrec, colorscale=log10)
+# s = scatter!(ax, Point2f(k_Δ, m_Δ), marker = :star5, markersize=25, color=:white, strokecolor=:gray, strokewidth=1)
+# axislegend(ax, [s], ["minimum value (k = $(k_Δ), m = $(m_Δ))"])
+# fig
 
-save("../figures/iris-reconstruction.png", fig)
+# save("../figures/iris-reconstruction.png", fig)
 
 
 
