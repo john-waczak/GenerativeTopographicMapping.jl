@@ -71,10 +71,23 @@ end
 
 
     gtm = GenerativeTopographicMapping.GTMBase(k,m,s,X)
+    Φ_square = gtm.Φ
+
     converged, llhs, AIC, BIC = GenerativeTopographicMapping.fit!(gtm, X; tol=0.1, nconverged=4)
-    @assert converged == true
+    @test converged == true
     @test size(gtm.R) == (n_nodes, n_datapoints)
     @test all(colsum ≈ 1 for colsum ∈ sum(gtm.R, dims=1))
+
+
+    # test out other topologies
+    gtm = GenerativeTopographicMapping.GTMBase(k,m,s,X; topology=:cylinder)
+    Φ_cylinder = gtm.Φ
+    @test Φ_square != Φ_cylinder
+
+    gtm = GenerativeTopographicMapping.GTMBase(k,m,s,X; topology=:torus)
+    Φ_torus = gtm.Φ
+    @test Φ_square != Φ_torus
+    @test Φ_cylinder!= Φ_torus
 end
 
 

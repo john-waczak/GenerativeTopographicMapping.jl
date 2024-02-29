@@ -16,7 +16,7 @@ mutable struct GTMBase{T1 <: AbstractArray, T2 <: AbstractArray, T3 <: AbstractA
 end
 
 
-function GTMBase(k, m, s, X; rand_init=false)
+function GTMBase(k, m, s, X; rand_init=false, topology=:square)
     # 1. define grid parameters
     n_records, n_features = size(X)
     n_nodes = k*k
@@ -36,7 +36,29 @@ function GTMBase(k, m, s, X; rand_init=false)
     # 5. create rbf activation matrix Φ
     Φ = ones(n_nodes, n_rbf_centers+1)
     let
-        Δ² = pairwise(sqeuclidean, Ξ, M, dims=1)
+        Δ² = zeros(size(Ξ,1), size(M,1))
+        ℓ = 2  # height and width of latent space grid
+        if topology == :cylinder
+            Threads.@threads for j ∈ axes(Δ², 2)
+                for i ∈ axes(Δ², 1)
+                    Δx = abs(Ξ[i,1] - M[j,1])
+                    Δy = abs(Ξ[i,2] - M[j,2])
+                    Δ²[i,j] = min(Δx, 2-Δx)^2 + Δy^2  # only wrap in x axis
+                end
+            end
+        elseif topology == :torus
+            Threads.@threads for j ∈ axes(Δ², 2)
+                for i ∈ axes(Δ², 1)
+                    Δx = abs(Ξ[i,1] - M[j,1])
+                    Δy = abs(Ξ[i,2] - M[j,2])
+                    Δ²[i,j] = min(Δx, 2-Δx)^2 + min(Δy, 2-Δy)^2  # wrap both axes
+                end
+            end
+        else
+            pairwise!(sqeuclidean, Δ², Ξ, M, dims=1)
+        end
+
+
         Φ[:, 1:end-1] .= exp.(-Δ² ./ (2*σ^2))
     end
 

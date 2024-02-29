@@ -15,6 +15,7 @@ MLJModelInterface.@mlj_model mutable struct GTM <: MLJModelInterface.Unsupervise
     m::Int = 4::(_ > 0)
     s::Float64 = 2.0::(_ > 0)
     α::Float64 = 0.1::(_ ≥ 0)
+    topology::Symbol = :square::(_ in (:square, :cylinder, :torus))
     nepochs::Int = 100::(_ ≥ 1)
     batchsize::Int = 0::(_ ≥ 0)
     tol::Float64 = 1e-3::(_ > 0)
@@ -43,7 +44,7 @@ function MLJModelInterface.fit(m::GTM, verbosity, Datatable)
 
 
     # 1. build the GTM
-    gtm = GTMBase(m.k, m.m, m.s, X; rand_init=m.rand_init)
+    gtm = GTMBase(m.k, m.m, m.s, X; topology=m.topology, rand_init=m.rand_init)
 
     # 2. Fit the GTM
     converged, llhs, AIC, BIC = fit!(
@@ -174,6 +175,7 @@ Train the machine with `fit!(mach, rows=...)`.
 - `m=4`:  There are `m²` total RBFs.
 - `s=2.0`: Scale factor for RBF variance.
 - `α=0.1`:  Model weight regularization parameter (0.0 for no regularization)
+- `topology=:square`: Topology of latent space. One of `:square`, `:cylinder`, or `:torus`
 - `tol=0.1`: Tolerance used for determining convergence during expectation-maximization fitting.
 - `niter=200`: Maximum number of training epochs.
 - `nrepeats=4`: Number of steps to repeat at/below `tol` before GTM is considered converged.
