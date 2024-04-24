@@ -1,7 +1,7 @@
 name = "GenerativeTopographicMapping"
 uuid = "110c1e60-17ba-4aeb-8cee-444277a6d160"
 authors = ["John Waczak <john.louis.waczak@gmail.com>"]
-version = "0.3"
+version = "0.4"
 
 [deps]
 Distances = "b4f34e82-e78d-54a5-968a-f98e89d6e8f7"
