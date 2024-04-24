@@ -3,6 +3,7 @@
 [![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://john-waczak.github.io/GenerativeTopographicMapping.jl/stable/)
 [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://john-waczak.github.io/GenerativeTopographicMapping.jl/dev/)
 [![Build Status](https://github.com/john-waczak/GenerativeTopographicMapping.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/john-waczak/GenerativeTopographicMapping.jl/actions/workflows/CI.yml?query=branch%3Amain)
+[![DOI](https://zenodo.org/badge/563880448.svg)](https://zenodo.org/doi/10.5281/zenodo.11061257)
 
 A Julia package for Generative Topographic Mapping originally introduced by [Bishop and Svensen](https://www.microsoft.com/en-us/research/wp-content/uploads/1998/01/bishop-gtm-ncomp-98.pdf) with inspiration from the [UGTM](https://ugtm.readthedocs.io/en/latest/overview.html) python package. This implementation provides wrappers for use withing the MLJ framework.
 
