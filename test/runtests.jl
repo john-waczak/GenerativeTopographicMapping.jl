@@ -8,6 +8,8 @@ using Distances
 
 stable_rng() = StableRNGs.StableRNG(1234)
 
+
+
 @testset "Initialization methods" begin
 
     # generate synthetic dataset for testing with 100 data points, 10 features, and 5 classes
@@ -91,7 +93,7 @@ end
 end
 
 
-@testset "MLJ Interface" begin
+@testset "GTM MLJ Interface" begin
     # generate synthetic dataset for testing with 100 data points, 10 features, and 5 classes
     X, y = make_blobs(100, 10;centers=5, rng=stable_rng());
 
@@ -113,4 +115,56 @@ end
     rpt = report(m)
     @test Set([:W, :β⁻¹, :Φ, :Ξ, :llhs, :converged, :AIC, :BIC]) == Set(keys(rpt))
 end
+
+
+
+@testset "simplex.jl" begin
+    Nₑ = 5  # nodes per edge
+    Nᵥ = 3  # number of vertices
+    D = Nᵥ - 1
+    Λ = gtm = GenerativeTopographicMapping.get_barycentric_grid_coords(Nₑ, Nᵥ)
+
+    @test size(Λ, 2) == binomial(Nₑ + D - 1, D)
+
+
+    # generate synthetic data
+    Data_X, Data_y = make_blobs(100, 10; centers=5, rng=stable_rng());
+    X = Tables.matrix(Data_X)
+
+    k = 10
+    m = 5
+    s = 0.1
+    Nᵥ = 3
+    gsm = GenerativeTopographicMapping.GenerativeSimplexMap(k,m,s, Nᵥ, X)
+
+    Ξ = gsm.Ξ
+    M = gsm.M
+    @test size(Ξ,1) == binomial(k + Nᵥ - 2, Nᵥ -1)
+    @test size(M,1) == binomial(m + Nᵥ - 2, Nᵥ -1)
+end
+
+
+@testset "GSM MLJ Interface" begin
+    # generate synthetic dataset for testing with 100 data points, 10 features, and 5 classes
+    X, y = make_blobs(100, 10;centers=5, rng=stable_rng());
+
+    model = GSM()
+    m = machine(model, X)
+    fit!(m, verbosity=0)
+
+    X̃ = MLJBase.transform(m, X)
+    @assert size(matrix(X̃)) == (100,3)
+
+    classes = MLJBase.predict(m, X)
+    @assert length(y) == 100
+
+    Resp = predict_responsibility(m, X)
+
+    fp = fitted_params(m)
+    @test Set([:gsm]) == Set(keys(fp))
+
+    rpt = report(m)
+    @test Set([:W, :β⁻¹, :Φ, :Ξ, :llhs, :converged, :AIC, :BIC]) == Set(keys(rpt))
+end
+
 

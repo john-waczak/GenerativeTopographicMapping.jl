@@ -89,8 +89,10 @@ function GTMBase(k, m, s, X; rand_init=false, topology=:square)
 
     # add the means back to each row since PCA uses
     # a mean-subtracted covariance matrix
-    for i ∈ axes(Ψ,1)
-        Ψ[i,:] .= Ψ[i,:] .+ mean(X[:,i])
+    if !(rand_init)
+        for i ∈ axes(Ψ,1)
+            Ψ[i,:] .= Ψ[i,:] .+ mean(X[:,i])
+        end
     end
 
     β⁻¹ = max(pca_vars[3], mean(pairwise(sqeuclidean, Ψ, dims=2))/2)
@@ -98,6 +100,7 @@ function GTMBase(k, m, s, X; rand_init=false, topology=:square)
     # 11. return final GTM object
     return GTMBase(Ξ, M, Φ, W, Ψ, zeros(n_nodes, n_records), (1/n_nodes) .* ones(n_nodes, n_records), β⁻¹)
 end
+
 
 
 function fit!(gtm, X; α = 0.1, nepochs=100, tol=1e-3, nconverged=5, verbose=false)
