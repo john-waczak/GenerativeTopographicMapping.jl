@@ -102,10 +102,10 @@ end
     fit!(m, verbosity=0)
 
     X̃ = MLJBase.transform(m, X)
-    @assert size(matrix(X̃)) == (100,2)
+    @test size(matrix(X̃)) == (100,2)
 
     classes = MLJBase.predict(m, X)
-    @assert length(y) == 100
+    @test length(y) == 100
 
     Resp = predict_responsibility(m, X)
 
@@ -153,10 +153,10 @@ end
     fit!(m, verbosity=0)
 
     X̃ = MLJBase.transform(m, X)
-    @assert size(matrix(X̃)) == (100,3)
+    @test size(matrix(X̃)) == (100,3)
 
     classes = MLJBase.predict(m, X)
-    @assert length(y) == 100
+    @test length(y) == 100
 
     Resp = predict_responsibility(m, X)
 
