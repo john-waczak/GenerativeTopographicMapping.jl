@@ -63,41 +63,45 @@ function GTMBase(k, m, s, X; rand_init=false, topology=:square)
     end
 
     # 6. perform PCA on data
-    pca = MultivariateStats.fit(PCA, X', maxoutdim=3, pratio=0.99999)
-    pca_vecs = projection(pca)
-    pca_vars = principalvars(pca)
+    data_means = vec(mean(Array(X), dims=1))
+    D = Array(X)' .- data_means
+    Svd = svd(D)
 
-    # 7. create matrix U from first two principal axes of data cov. matrix
-    U = pca_vecs[:, 1:2]
-    # scale by square root of variance for some reason
+    U = Svd.U[:, 1:2]
+    pca_vars = (abs2.(Svd.S) ./ (n_records-1))[1:3]
+
+
+    # scale by square root of variance for to convert to loadings
     U[:,1] .= U[:,1] .* sqrt(pca_vars[1])
     U[:,2] .= U[:,2] .* sqrt(pca_vars[2])
 
-    # 8. Initialize parameter matrix W using U and Φ
+    # 7. Initialize parameter matrix W using U and Φ
 
     Ξnorm = copy(Ξ)
     Ξnorm[:,1] = (Ξnorm[:,1] .-  mean(Ξnorm[:,1])) ./ std(Ξnorm[:,1])
     Ξnorm[:,2] = (Ξnorm[:,2] .-  mean(Ξnorm[:,2])) ./ std(Ξnorm[:,2])
 
     W = U*Ξnorm' * pinv(Φ')
+
     if rand_init
         W = rand(n_features, n_rbf_centers+1)
     end
 
-    # 9. Initialize data manifold Ψ using W and Φ
+    # 8. Initialize data manifold Ψ using W and Φ
     Ψ = W * Φ'
 
     # add the means back to each row since PCA uses
-    # a mean-subtracted covariance matrix
+    # a mean-subtracted data matrix
     if !(rand_init)
         for i ∈ axes(Ψ,1)
             Ψ[i,:] .= Ψ[i,:] .+ mean(X[:,i])
         end
     end
 
+    # 9. Set the variance parameter
     β⁻¹ = max(pca_vars[3], mean(pairwise(sqeuclidean, Ψ, dims=2))/2)
 
-    # 11. return final GTM object
+    # 10. return final GTM object
     return GTMBase(Ξ, M, Φ, W, Ψ, zeros(n_nodes, n_records), (1/n_nodes) .* ones(n_nodes, n_records), β⁻¹)
 end
 

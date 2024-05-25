@@ -1,4 +1,5 @@
 using Combinatorics
+using LinearAlgebra
 
 
 function get_barycentric_grid_coords(Nₑ, Nᵥ)
@@ -44,61 +45,51 @@ function GenerativeSimplexMap(k, m, s, Nᵥ, X; rand_init=false,)
         Φ[:, 1:end-1] .= exp.(-Δ² ./ (2*σ^2))
     end
 
-    # # # 6. perform PCA on data
-    # pca = MultivariateStats.fit(PCA, X'; pratio=1, maxoutdim=Nᵥ+1)
-    # pca_vecs = projection(pca)
-    # pca_vars = principalvars(pca)
+    # 6. perform PCA on data
+    data_means = vec(mean(Array(X), dims=1))
+    D = Array(X)' .- data_means
+    Svd = svd(D)
 
-    # println(length(pca_vars))
-    # println(pca)
-
-    # # 7. create matrix U from first Nᵥ principal axes of data cov. matrix
-    # U = pca_vecs[:, 1:Nᵥ]
-
-    # # scale by square root of variance for some reason
-    # for i ∈ 1:Nᵥ
-    #     U[:,i] .= U[:,i] .* sqrt(pca_vars[i])
-    # end
-
-    # # 8. Initialize parameter matrix W using U and Φ
-
-    # Ξnorm = copy(Ξ)
-    # for i ∈ 1:Nᵥ
-    #     Ξnorm[:,i] = (Ξnorm[:,i] .-  mean(Ξnorm[:,i])) ./ std(Ξnorm[:,i])
-    # end
-    # W = U*Ξnorm' * pinv(Φ')
+    U = Svd.U[:, 1:Nᵥ]
+    pca_vars = (abs2.(Svd.S) ./ (n_records-1))[1:Nᵥ+1]
 
 
-    # if rand_init
-    #     W = rand(n_features, n_rbf_centers+1)
-    # end
+    # convert to loadings
+    for i ∈ 1:Nᵥ
+        U[:,i] .= U[:,i] .* sqrt(pca_vars[i])
+    end
+
+    # 7. Initialize parameter matrix W using U and Φ
+
+    Ξnorm = copy(Ξ)
+    for i ∈ 1:Nᵥ
+        Ξnorm[:,i] = (Ξnorm[:,i] .-  mean(Ξnorm[:,i])) ./ std(Ξnorm[:,i])
+    end
+    W = U*Ξnorm' * pinv(Φ')
 
 
-    W = rand(n_features, n_rbf_centers+1)
+    if rand_init
+        W = rand(n_features, n_rbf_centers+1)
+    end
 
-    # 9. Initialize data manifold Ψ using W and Φ
+
+    # 8. Initialize data manifold Ψ using W and Φ
     Ψ = W * Φ'
 
 
-    β⁻¹ = mean(pairwise(sqeuclidean, Ψ, dims=2))/2
+    # add the means back to each row since PCA uses
+    # a mean-subtracted data matrix
+    if !(rand_init)
+        for i ∈ axes(Ψ,1)
+            Ψ[i,:] .= Ψ[i,:] .+ mean(X[:,i])
+        end
+    end
 
-    # # add the means back to each row since PCA uses
-    # # a mean-subtracted covariance matrix
-    # if !(rand_init)
-    #     for i ∈ axes(Ψ,1)
-    #         Ψ[i,:] .= Ψ[i,:] .+ mean(X[:,i])
-    #     end
-    # end
-
-    # # 10. See the variance parameter
-    # if length(pca_vars) > Nᵥ
-    #     β⁻¹ = max(pca_vars[Nᵥ+1], mean(pairwise(sqeuclidean, Ψ, dims=2))/2)
-    # else
-    #     β⁻¹ = mean(pairwise(sqeuclidean, Ψ, dims=2))/2
-    # end
+    # 9. Set the variance parameter
+    β⁻¹ = max(pca_vars[Nᵥ+1], mean(pairwise(sqeuclidean, Ψ, dims=2))/2)
 
 
-    # 11. return final GTM object
+    # 10. return final GTM object
     return GTMBase(Ξ, M, Φ, W, Ψ, zeros(n_nodes, n_records), (1/n_nodes) .* ones(n_nodes, n_records), β⁻¹)
 end
 

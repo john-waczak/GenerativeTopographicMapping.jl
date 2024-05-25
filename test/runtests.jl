@@ -164,7 +164,8 @@ end
     @test Set([:gsm]) == Set(keys(fp))
 
     rpt = report(m)
-    @test Set([:W, :β⁻¹, :Φ, :Ξ, :llhs, :converged, :AIC, :BIC]) == Set(keys(rpt))
+
+    @test Set([:W, :β⁻¹, :Φ, :Ξ, :llhs, :converged, :AIC, :BIC, :idx_vertices]) == Set(keys(rpt))
 end
 
 

@@ -118,6 +118,10 @@ function MLJModelInterface.fit(m::GSM, verbosity, Datatable)
 
     # 3. Collect results
     cache = nothing
+
+    # get indices of vertices
+    idx_vertices = vcat([findall(gsm.Ξ[:,j] .== 1) for j ∈ axes(gsm.Ξ,2)]...)
+
     report = (;
               :W => gsm.W,
               :β⁻¹ => gsm.β⁻¹,
@@ -127,6 +131,7 @@ function MLJModelInterface.fit(m::GSM, verbosity, Datatable)
               :converged => converged,
               :AIC => AIC,
               :BIC => BIC,
+              :idx_vertices => idx_vertices
               )
 
     return (gsm, cache, report)
