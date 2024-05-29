@@ -2,11 +2,11 @@ module GenerativeTopographicMapping
 
 
 include("gtm-base.jl")
-include("simplex.jl")
+include("gsm-base.jl")
 
 
 export DataMeans, DataModes
-export responsibility, data_reproduction
+export responsibility
 
 using MLJModelInterface
 import MLJBase
@@ -103,7 +103,7 @@ function MLJModelInterface.fit(m::GSM, verbosity, Datatable)
     end
 
     # 1. build the GTM
-    gsm = GenerativeSimplexMap(m.k, m.m, m.s, m.Nv, X; rand_init=m.rand_init)
+    gsm = GSMBase(m.k, m.m, m.s, m.Nv, X; rand_init=m.rand_init)
 
     # 2. Fit the GTM
     converged, llhs, AIC, BIC = fit!(
@@ -183,17 +183,15 @@ function MLJModelInterface.transform(m::GSM, fitresult, Data_new)
 end
 
 
-
-
-function predict_responsibility(m::MLJBase.Machine{GTM, true}, Data_new)
+# Note that the interface changed a bit...
+function predict_responsibility(m::MLJBase.Machine{GTM, GTM, true}, Data_new)
     Xnew = MLJModelInterface.matrix(Data_new)
     gtm = fitted_params(m)[:gtm]
     return responsibility(gtm, Xnew)
 end
 
 
-
-function predict_responsibility(m::MLJBase.Machine{GSM, true}, Data_new)
+function predict_responsibility(m::MLJBase.Machine{GSM, GSM, true}, Data_new)
     Xnew = MLJModelInterface.matrix(Data_new)
     gsm = fitted_params(m)[:gsm]
     return responsibility(gsm, Xnew)
@@ -206,7 +204,7 @@ MLJModelInterface.metadata_pkg.(
     [GTM, GSM],
     name = "GenerativeTopographicMapping",
     uuid = "110c1e60-17ba-4aeb-8cee-444277a6d160", # see your Project.toml
-    url  = "https://github.com/john-waczak/GenerativeTopographicMapping.jl",  # URL to your package repo
+    url  = "https://github.com/john-waczak/GenerativeTopographicMapping.jl",
     julia = true,          # is it written entirely in Julia?
     license = "MIT",       # your package license
     is_wrapper = false,    # does it wrap around some other package?
@@ -300,6 +298,10 @@ classes = rpt.classes
 ```
 """
 GTM
+
+
+
+
 
 
 const DOC_GSM = ""*

@@ -99,13 +99,14 @@ end
 
     model = GTM()
     m = machine(model, X)
+
     fit!(m, verbosity=0)
 
     X̃ = MLJBase.transform(m, X)
     @test size(matrix(X̃)) == (100,2)
 
     classes = MLJBase.predict(m, X)
-    @test length(y) == 100
+    @test length(classes) == 100
 
     Resp = predict_responsibility(m, X)
 
@@ -118,24 +119,24 @@ end
 
 
 
-@testset "simplex.jl" begin
+@testset "gsm-base.jl" begin
     Nₑ = 5  # nodes per edge
     Nᵥ = 3  # number of vertices
     D = Nᵥ - 1
     Λ = gtm = GenerativeTopographicMapping.get_barycentric_grid_coords(Nₑ, Nᵥ)
-
     @test size(Λ, 2) == binomial(Nₑ + D - 1, D)
 
 
     # generate synthetic data
-    Data_X, Data_y = make_blobs(100, 10; centers=5, rng=stable_rng());
-    X = Tables.matrix(Data_X)
+    X = rand(100, 10)  # test data must be non-negative
 
     k = 10
     m = 5
     s = 0.1
     Nᵥ = 3
-    gsm = GenerativeTopographicMapping.GenerativeSimplexMap(k,m,s, Nᵥ, X)
+    gsm = GenerativeTopographicMapping.GSMBase(k,m,s, Nᵥ, X)
+
+    println(typeof(gsm))
 
     Ξ = gsm.Ξ
     M = gsm.M
@@ -145,20 +146,26 @@ end
 
 
 @testset "GSM MLJ Interface" begin
-    # generate synthetic dataset for testing with 100 data points, 10 features, and 5 classes
-    X, y = make_blobs(100, 10;centers=5, rng=stable_rng());
+    Nₑ = 5  # nodes per edge
+    Nᵥ = 3  # number of vertices
+    D = Nᵥ - 1
 
-    model = GSM()
+
+    # generate synthetic dataset for testing with 100 data points, 10 features, and 5 classes
+    X = Tables.table(rand(100,10))
+
+    model = GSM(k=Nₑ, Nv=Nᵥ)
     m = machine(model, X)
     fit!(m, verbosity=0)
 
     X̃ = MLJBase.transform(m, X)
-    @test size(matrix(X̃)) == (100,3)
+    @test size(matrix(X̃)) == (100, Nᵥ)
 
     classes = MLJBase.predict(m, X)
-    @test length(y) == 100
+    @test length(classes) == 100
 
     Resp = predict_responsibility(m, X)
+    @test all(isapprox.(sum(Resp, dims=2), 1.0))
 
     fp = fitted_params(m)
     @test Set([:gsm]) == Set(keys(fp))
@@ -166,6 +173,7 @@ end
     rpt = report(m)
 
     @test Set([:W, :β⁻¹, :Φ, :Ξ, :llhs, :converged, :AIC, :BIC, :idx_vertices]) == Set(keys(rpt))
+
 end
 
 

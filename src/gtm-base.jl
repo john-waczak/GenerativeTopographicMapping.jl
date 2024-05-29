@@ -107,8 +107,7 @@ end
 
 
 
-function fit!(gtm, X; α = 0.1, nepochs=100, tol=1e-3, nconverged=5, verbose=false)
-
+function fit!(gtm::GTMBase, X; α = 0.1, nepochs=100, tol=1e-3, nconverged=5, verbose=false)
     # get the needed dimensions
     N,D = size(X)
     K = size(gtm.Ξ,1)
@@ -188,125 +187,125 @@ function fit!(gtm, X; α = 0.1, nepochs=100, tol=1e-3, nconverged=5, verbose=fal
 end
 
 
-function get_batches(batchsize, N)
-    idxs = [i for i in range(1, step=batchsize, stop=N)]
-    if idxs[end] < N
-        push!(idxs, N)
-    end
-    idx_batches = [idxs[i]:idxs[i+1] for i ∈ 1:length(idxs)-1]
-end
+# function get_batches(batchsize, N)
+#     idxs = [i for i in range(1, step=batchsize, stop=N)]
+#     if idxs[end] < N
+#         push!(idxs, N)
+#     end
+#     idx_batches = [idxs[i]:idxs[i+1] for i ∈ 1:length(idxs)-1]
+# end
 
 
 
 
-# TODO: Fix me!
-function fit_incremental!(gtm, X; α = 0.1, nepochs=100, batchsize=32, tol=1e-3, nconverged=5, verbose=false)
+# # TODO: Fix me!
+# function fit_incremental!(gtm, X; α = 0.1, nepochs=100, batchsize=32, tol=1e-3, nconverged=5, verbose=false)
 
-    # get the needed dimensions
-    N,D = size(X)
-    K = size(gtm.Ξ,1)
-    M = size(gtm.M,1) + 1  # don't forget the bias term!
+#     # get the needed dimensions
+#     N,D = size(X)
+#     K = size(gtm.Ξ,1)
+#     M = size(gtm.M,1) + 1  # don't forget the bias term!
 
-    # set up the prefactor
-    prefac = 0.0
+#     # set up the prefactor
+#     prefac = 0.0
 
-    #GΦ = diagm(sum(gtm.R, dims=2)[:]) * gtm.Φ
-    G = diagm(sum(gtm.R, dims=2)[:])
-    RX = gtm.R*X
-    LHS = zeros(M,M)
-    RHS = zeros(M,D)
+#     #GΦ = diagm(sum(gtm.R, dims=2)[:]) * gtm.Φ
+#     G = diagm(sum(gtm.R, dims=2)[:])
+#     RX = gtm.R*X
+#     LHS = zeros(M,M)
+#     RHS = zeros(M,D)
 
-    l = 0.0
-    llh_prev = 0.0
-    llhs = Float64[]
-    nclose = 0
-    converged = false
+#     l = 0.0
+#     llh_prev = 0.0
+#     llhs = Float64[]
+#     nclose = 0
+#     converged = false
 
-    idx_batches = get_batches(batchsize, N)
+#     idx_batches = get_batches(batchsize, N)
 
-    for i in 1:nepochs
-        @showprogress for idx_batch in idx_batches
-            Nbatch = length(idx_batch)
+#     for i in 1:nepochs
+#         @showprogress for idx_batch in idx_batches
+#             Nbatch = length(idx_batch)
 
-            # set up array views
-            Xb = @view X[idx_batch, :]
-            Δ²_b = @view gtm.Δ²[:, idx_batch]
-            Rb_old = gtm.R[:, idx_batch]
-            Rb = @view gtm.R[:, idx_batch]
+#             # set up array views
+#             Xb = @view X[idx_batch, :]
+#             Δ²_b = @view gtm.Δ²[:, idx_batch]
+#             Rb_old = gtm.R[:, idx_batch]
+#             Rb = @view gtm.R[:, idx_batch]
 
-            # expectation step
-            mul!(gtm.Ψ, gtm.W, gtm.Φ')
+#             # expectation step
+#             mul!(gtm.Ψ, gtm.W, gtm.Φ')
 
-            pairwise!(sqeuclidean, Δ²_b, gtm.Ψ, Xb', dims=2)
-            softmax!(Rb, -(1/(2*gtm.β⁻¹)) .* Δ²_b, dims=1)
+#             pairwise!(sqeuclidean, Δ²_b, gtm.Ψ, Xb', dims=2)
+#             softmax!(Rb, -(1/(2*gtm.β⁻¹)) .* Δ²_b, dims=1)
 
-            #mul!(GΦ, diagm(sum(gtm.R, dims=2)[:]), gtm.Φ)      # update the G matrix diagonal
-            #mul!(RX, gtm.R, X)                                 # update intermediate for R.H.S
+#             #mul!(GΦ, diagm(sum(gtm.R, dims=2)[:]), gtm.Φ)      # update the G matrix diagonal
+#             #mul!(RX, gtm.R, X)                                 # update intermediate for R.H.S
 
-            G[diagind(G)] += sum(Rb - Rb_old, dims=2)
-            RX +=  (Rb .- Rb_old)*Xb                            # update intermediate for R.H.S
-
-
-            # MAXIMIZATION
-            #mul!(LHS, gtm.Φ', GΦ)                              # update left-hand-side
-            mul!(LHS, gtm.Φ', G*gtm.Φ)                              # update left-hand-side
-            if α > 0
-                LHS[diagind(LHS)] .+= α * gtm.β⁻¹               # add regularization
-            end
-
-            mul!(RHS, gtm.Φ', RX)                              # update right-hand-side
-
-            gtm.W = (LHS\RHS)'
-
-            Δ²_b_old = copy(Δ²_b)
-            mul!(gtm.Ψ, gtm.W, gtm.Φ')
-            pairwise!(sqeuclidean, Δ²_b, gtm.Ψ, Xb', dims=2)
-
-            gtm.β⁻¹ = sum(gtm.R .* gtm.Δ²)/(N*D)                    # update variance
-
-            # gtm.β⁻¹ = gtm.β⁻¹ + sum(Rb .* Δ²_b)/(N*D) - sum(Rb_old .* Δ²_b_old)/(N*D)  # update variance
-
-            # gtm.β⁻¹ += sum((Rb .- Rb_old) .* Δ²_b)/(Nbatch*D)
-        end
-
-        # UPDATE LOG-LIKELIHOOD
-        log_prefac = log((1/(2* gtm.β⁻¹* π))^(D/2) * (1/K))
-        if i == 1
-            l = max(sum(log_prefac .+ logsumexp(-(1/(2*gtm.β⁻¹)) .* gtm.Δ², dims=1)), nextfloat(typemin(1.0)))
-            push!(llhs, l)
-        else
-            llh_prev = l
-            l = max(sum(log_prefac .+ logsumexp(-(1/(2*gtm.β⁻¹)) .* gtm.Δ², dims=1)), nextfloat(typemin(1.0)))
-            push!(llhs, l)
-
-            # check for convergence
-            rel_diff = abs(l - llh_prev)/min(abs(l), abs(llh_prev))
-
-            if rel_diff <= tol
-                # increment the number of "close" difference
-                nclose += 1
-            end
-
-            if nclose == nconverged
-                converged = true
-                break
-            end
-        end
-
-        if verbose
-            println("iter: $(i), log-likelihood = $(l)")
-        end
-    end
-
-    AIC = 2*length(gtm.W) - 2*llhs[end]
-    BIC = log(size(X,1))*length(gtm.W) - 2*llhs[end]
-
-    return converged, llhs, AIC, BIC
-end
+#             G[diagind(G)] += sum(Rb - Rb_old, dims=2)
+#             RX +=  (Rb .- Rb_old)*Xb                            # update intermediate for R.H.S
 
 
+#             # MAXIMIZATION
+#             #mul!(LHS, gtm.Φ', GΦ)                              # update left-hand-side
+#             mul!(LHS, gtm.Φ', G*gtm.Φ)                              # update left-hand-side
+#             if α > 0
+#                 LHS[diagind(LHS)] .+= α * gtm.β⁻¹               # add regularization
+#             end
 
-function DataMeans(gtm, X)
+#             mul!(RHS, gtm.Φ', RX)                              # update right-hand-side
+
+#             gtm.W = (LHS\RHS)'
+
+#             Δ²_b_old = copy(Δ²_b)
+#             mul!(gtm.Ψ, gtm.W, gtm.Φ')
+#             pairwise!(sqeuclidean, Δ²_b, gtm.Ψ, Xb', dims=2)
+
+#             gtm.β⁻¹ = sum(gtm.R .* gtm.Δ²)/(N*D)                    # update variance
+
+#             # gtm.β⁻¹ = gtm.β⁻¹ + sum(Rb .* Δ²_b)/(N*D) - sum(Rb_old .* Δ²_b_old)/(N*D)  # update variance
+
+#             # gtm.β⁻¹ += sum((Rb .- Rb_old) .* Δ²_b)/(Nbatch*D)
+#         end
+
+#         # UPDATE LOG-LIKELIHOOD
+#         log_prefac = log((1/(2* gtm.β⁻¹* π))^(D/2) * (1/K))
+#         if i == 1
+#             l = max(sum(log_prefac .+ logsumexp(-(1/(2*gtm.β⁻¹)) .* gtm.Δ², dims=1)), nextfloat(typemin(1.0)))
+#             push!(llhs, l)
+#         else
+#             llh_prev = l
+#             l = max(sum(log_prefac .+ logsumexp(-(1/(2*gtm.β⁻¹)) .* gtm.Δ², dims=1)), nextfloat(typemin(1.0)))
+#             push!(llhs, l)
+
+#             # check for convergence
+#             rel_diff = abs(l - llh_prev)/min(abs(l), abs(llh_prev))
+
+#             if rel_diff <= tol
+#                 # increment the number of "close" difference
+#                 nclose += 1
+#             end
+
+#             if nclose == nconverged
+#                 converged = true
+#                 break
+#             end
+#         end
+
+#         if verbose
+#             println("iter: $(i), log-likelihood = $(l)")
+#         end
+#     end
+
+#     AIC = 2*length(gtm.W) - 2*llhs[end]
+#     BIC = log(size(X,1))*length(gtm.W) - 2*llhs[end]
+
+#     return converged, llhs, AIC, BIC
+# end
+
+
+
+function DataMeans(gtm::GTMBase, X)
     mul!(gtm.Ψ, gtm.W, gtm.Φ')
     Δ² = pairwise(sqeuclidean, gtm.Ψ, X', dims=2)
     Δ² .*= -(1/(2*gtm.β⁻¹))
@@ -316,7 +315,7 @@ function DataMeans(gtm, X)
 end
 
 
-function DataModes(gtm, X)
+function DataModes(gtm::GTMBase, X)
     mul!(gtm.Ψ, gtm.W, gtm.Φ')
     Δ² = pairwise(sqeuclidean, gtm.Ψ, X', dims=2)
     Δ² .*= -(1/(2*gtm.β⁻¹))
@@ -328,7 +327,7 @@ function DataModes(gtm, X)
 end
 
 
-function class_labels(gtm, X)
+function class_labels(gtm::GTMBase, X)
     mul!(gtm.Ψ, gtm.W, gtm.Φ')
     Δ² = pairwise(sqeuclidean, gtm.Ψ, X', dims=2)
     Δ² .*= -(1/(2*gtm.β⁻¹))
@@ -340,7 +339,7 @@ function class_labels(gtm, X)
 end
 
 
-function responsibility(gtm, X)
+function responsibility(gtm::GTMBase, X)
     mul!(gtm.Ψ, gtm.W, gtm.Φ')
     Δ² = pairwise(sqeuclidean, gtm.Ψ, X', dims=2)
     Δ² .*= -(1/(2*gtm.β⁻¹))
