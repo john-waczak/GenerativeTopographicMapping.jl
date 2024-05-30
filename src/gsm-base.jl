@@ -49,6 +49,7 @@ function GSMBase(k, m, s, Nᵥ, X; rand_init=false,)
     # 2. create grid of K latent nodes
     Ξ = get_barycentric_grid_coords(k, Nᵥ)'
 
+
     # 3. create grid of M rbf centers (means)
     M = get_barycentric_grid_coords(m, Nᵥ)'
 
@@ -57,11 +58,12 @@ function GSMBase(k, m, s, Nᵥ, X; rand_init=false,)
     σ = s * (1/k)  # all side lengths are 1.0
 
     # 5. create rbf activation matrix Φ
-    Φ = ones(n_nodes, n_rbf_centers+1)
+    Φ = ones(n_nodes, n_rbf_centers + Nᵥ + 1)
     let
         Δ² = zeros(size(Ξ,1), size(M,1))
         pairwise!(sqeuclidean, Δ², Ξ, M, dims=1)
-        Φ[:, 1:end-1] .= exp.(-Δ² ./ (2*σ^2))
+        Φ[:, 1:end-Nᵥ-1] .= exp.(-Δ² ./ (2*σ^2))
+        Φ[:, end-Nᵥ:end-1] .= Ξ
     end
 
     # 6. perform PCA on data
@@ -92,13 +94,12 @@ function GSMBase(k, m, s, Nᵥ, X; rand_init=false,)
 
 
     if rand_init
-        W = rand(n_features, n_rbf_centers+1)
+        W = rand(n_features, n_rbf_centers + Nᵥ + 1)
     end
 
 
     # 8. Initialize data manifold Ψ using W and Φ
     Ψ = W * Φ'
-
 
     # add the means back to each row since PCA uses
     # a mean-subtracted data matrix
@@ -127,7 +128,9 @@ function fit!(gsm::GSMBase, X; α = 0.1, nepochs=100, tol=1e-3, nconverged=5, ve
     N,D = size(X)
 
     K = size(gsm.Ξ,1)
-    M = size(gsm.M,1) + 1  # don't forget the bias term!
+
+    # M = size(gsm.M,1) + 1  # don't forget the bias term!
+    M = size(gsm.Φ,2)
 
     # set up the prefactor
     LnX = log.(X .+ eps(eltype(X)))
