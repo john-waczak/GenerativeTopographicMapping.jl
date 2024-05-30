@@ -213,7 +213,7 @@ end
 
 function DataMeans(gsm::GSMBase, X)
     mul!(gsm.Ψ, gsm.W, gsm.Φ')
-    Δ² = pairwise(sqeuclidean, gsm.Ψ, X', dims=2)
+    Δ² = pairwise(sqeuclidean, gsm.Ψ, log.(X .+ eps(eltype(X)))', dims=2)
     Δ² .*= -(1/(2*gsm.β⁻¹))
     R = softmax(Δ², dims=1)
 
@@ -223,7 +223,7 @@ end
 
 function DataModes(gsm::GSMBase, X)
     mul!(gsm.Ψ, gsm.W, gsm.Φ')
-    Δ² = pairwise(sqeuclidean, gsm.Ψ, X', dims=2)
+    Δ² = pairwise(sqeuclidean, gsm.Ψ, log.(X .+ eps(eltype(X)))', dims=2)
     Δ² .*= -(1/(2*gsm.β⁻¹))
     R = softmax(Δ², dims=1)
 
@@ -235,7 +235,7 @@ end
 
 function class_labels(gsm::GSMBase, X)
     mul!(gsm.Ψ, gsm.W, gsm.Φ')
-    Δ² = pairwise(sqeuclidean, gsm.Ψ, X', dims=2)
+    Δ² = pairwise(sqeuclidean, gsm.Ψ, log.(X .+ eps(eltype(X)))', dims=2)
     Δ² .*= -(1/(2*gsm.β⁻¹))
     R = softmax(Δ², dims=1)
 
