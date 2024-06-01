@@ -4,17 +4,21 @@ using Statistics, MultivariateStats
 using Distances
 using LogExpFunctions
 using ProgressMeter
+using Distributions
+
+
 
 
 mutable struct GSMBase{T1 <: AbstractArray, T2 <: AbstractArray, T3 <: AbstractArray, T4 <: AbstractArray, T5 <: AbstractArray, T6 <: AbstractArray, T7 <: AbstractArray}
-    Ξ::T1
-    M::T2
-    Φ::T3
-    W::T4
-    Ψ::T5
-    Δ²::T6
-    R::T7
-    β⁻¹::Float64
+    Ξ::T1               # Latent coordinates
+    M::T2               # RBF coordinates
+    Φ::T3               # RBF activations
+    W::T4               # RBF weights
+    Ψ::T5               # projected node means
+    Δ²::T6              # Node-data distance matrix
+    R::T7               # Responsibilities
+    β⁻¹::Float64         # precision
+    # Norm::Float64       # Normalization for node weights
 end
 
 
@@ -131,7 +135,7 @@ end
 
 
 
-function fit!(gsm::GSMBase, X; α = 0.1, nepochs=100, tol=1e-3, nconverged=5, verbose=false)
+function fit!(gsm::GSMBase, X; λ = 0.1, nepochs=100, tol=1e-3, nconverged=5, verbose=false)
     # get the needed dimensions
     N,D = size(X)
 
@@ -196,8 +200,8 @@ function fit!(gsm::GSMBase, X; α = 0.1, nepochs=100, tol=1e-3, nconverged=5, ve
 
         # MAXIMIZATION
         mul!(LHS, gsm.Φ', GΦ)                              # update left-hand-side
-        if α > 0
-            LHS[diagind(LHS)] .+= α * gsm.β⁻¹               # add regularization
+        if λ > 0
+            LHS[diagind(LHS)] .+= λ * gsm.β⁻¹               # add regularization
         end
         mul!(RHS, gsm.Φ', RLnX)                              # update right-hand-side
 

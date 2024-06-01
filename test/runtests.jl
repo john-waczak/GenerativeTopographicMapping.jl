@@ -136,8 +136,6 @@ end
     Nᵥ = 3
     gsm = GenerativeTopographicMapping.GSMBase(k,m,s, Nᵥ, X)
 
-    println(typeof(gsm))
-
     Ξ = gsm.Ξ
     M = gsm.M
     @test size(Ξ,1) == binomial(k + Nᵥ - 2, Nᵥ -1)

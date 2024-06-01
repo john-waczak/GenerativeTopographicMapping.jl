@@ -1,200 +1,19 @@
 module GenerativeTopographicMapping
 
+include("gtm-mlj.jl")
+include("gsm-mlj.jl")
 
-include("gtm-base.jl")
-include("gsm-base.jl")
-
+export GSM
 export DataMeans, DataModes
 export responsibility
-
-using MLJModelInterface
-import MLJBase
 export predict_responsibility
 
-MLJModelInterface.@mlj_model mutable struct GTM <: MLJModelInterface.Unsupervised
-    k::Int = 16::(_ > 0)
-    m::Int = 4::(_ > 0)
-    s::Float64 = 2.0::(_ > 0)
-    α::Float64 = 0.1::(_ ≥ 0)
-    topology::Symbol = :square::(_ in (:square, :cylinder, :torus))
-    nepochs::Int = 100::(_ ≥ 1)
-    batchsize::Int = 0::(_ ≥ 0)
-    tol::Float64 = 1e-3::(_ > 0)
-    nconverged::Int = 4::(_ ≥ 1)
-    rand_init::Bool = false::(_ in (false, true))
-end
 
 
 
-MLJModelInterface.@mlj_model mutable struct GSM <: MLJModelInterface.Unsupervised
-    k::Int = 10::(_ > 0)                              # nodes per edge
-    m::Int = 5::(_ > 0)                               # rbf per edge
-    Nv::Int = 3::(_ > 0)                              # n-vertices, i.e. n-endmembers
-    s::Float64 = 1.0::(_ > 0)                         # rbf variance scale factor
-    α::Float64 = 0.1::(_ ≥ 0)                         # weight sparsity parameter
-    nepochs::Int = 100::(_ ≥ 1)                       # max number of EM steps
-    tol::Float64 = 1e-3::(_ > 0)                      # fitting tolerance for llh
-    nconverged::Int = 4::(_ ≥ 1)                      # number of steps below tol before conv.
-    rand_init::Bool = false::(_ in (false, true))     # random weights or PCA init.
-end
-
-
-function MLJModelInterface.fit(m::GTM, verbosity, Datatable)
-    # assume that X is a table
-    X = MLJModelInterface.matrix(Datatable)
-
-    batchsize = m.batchsize
-    if batchsize ≥ size(X,1)
-        println("Batch size is ≥ number of records. Setting batch size to n records...")
-        batchsize=0
-    end
-
-
-    if verbosity > 0
-        verbose = true
-    else
-        verbose = false
-    end
-
-
-    # 1. build the GTM
-    gtm = GTMBase(m.k, m.m, m.s, X; topology=m.topology, rand_init=m.rand_init)
-
-    # 2. Fit the GTM
-    converged, llhs, AIC, BIC = fit!(
-        gtm,
-        X,
-        α = m.α,
-        nepochs=m.nepochs,
-        tol=m.tol,
-        nconverged=m.nconverged,
-        verbose=verbose,
-    )
-
-    # 3. Collect results
-    cache = nothing
-    report = (;
-              :W => gtm.W,
-              :β⁻¹ => gtm.β⁻¹,
-              :Φ => gtm.Φ,
-              :Ξ => gtm.Ξ,
-              :llhs => llhs,
-              :converged => converged,
-              :AIC => AIC,
-              :BIC => BIC,
-              )
-
-    return (gtm, cache, report)
-end
-
-
-
-function MLJModelInterface.fit(m::GSM, verbosity, Datatable)
-    # assume that X is a table
-    X = MLJModelInterface.matrix(Datatable)
-
-    if verbosity > 0
-        verbose = true
-    else
-        verbose = false
-    end
-
-    # 1. build the GTM
-    gsm = GSMBase(m.k, m.m, m.s, m.Nv, X; rand_init=m.rand_init)
-
-    # 2. Fit the GTM
-    converged, llhs, AIC, BIC = fit!(
-        gsm,
-        X,
-        α = m.α,
-        nepochs=m.nepochs,
-        tol=m.tol,
-        nconverged=m.nconverged,
-        verbose=verbose,
-    )
-
-    # 3. Collect results
-    cache = nothing
-
-    # get indices of vertices
-    idx_vertices = vcat([findall(gsm.Ξ[:,j] .== 1) for j ∈ axes(gsm.Ξ,2)]...)
-
-    report = (;
-              :W => gsm.W,
-              :β⁻¹ => gsm.β⁻¹,
-              :Φ => gsm.Φ,
-              :Ξ => gsm.Ξ,
-              :llhs => llhs,
-              :converged => converged,
-              :AIC => AIC,
-              :BIC => BIC,
-              :idx_vertices => idx_vertices
-              )
-
-    return (gsm, cache, report)
-end
-
-
-
-MLJModelInterface.fitted_params(m::GTM, fitresult) = (gtm=fitresult,)
-MLJModelInterface.fitted_params(m::GSM, fitresult) = (gsm=fitresult,)
-
-
-function MLJModelInterface.predict(m::GTM, fitresult, Data_new)
-    # Return the mode index as a class label
-    Xnew = MLJModelInterface.matrix(Data_new)
-    labels = MLJModelInterface.categorical(1:m.k^2) # there are k^2 many SOM nodes
-
-    return labels[class_labels(fitresult, Xnew)]
-end
-
-
-function MLJModelInterface.predict(m::GSM, fitresult, Data_new)
-    # Return the mode index as a class label
-    Xnew = MLJModelInterface.matrix(Data_new)
-    n_nodes = binomial(m.k + m.Nv - 2, m.Nv - 1)
-    labels = MLJModelInterface.categorical(1:n_nodes) # there are k^2 many SOM nodes
-
-    return labels[class_labels(fitresult, Xnew)]
-end
-
-
-
-function MLJModelInterface.transform(m::GTM, fitresult, Data_new)
-    # return a table with the mean ξ₁ and ξ₂ for each record
-    Xnew = MLJModelInterface.matrix(Data_new)
-    ξmeans = DataMeans(fitresult, Xnew)
-
-    return MLJModelInterface.table(ξmeans; names=(:ξ₁, :ξ₂))
-end
-
-
-function MLJModelInterface.transform(m::GSM, fitresult, Data_new)
-    # return a table with the mean ξ₁ and ξ₂ for each record
-    Xnew = MLJModelInterface.matrix(Data_new)
-    ξmeans = DataMeans(fitresult, Xnew)
-    names = [Symbol("ξ$(i)") for i ∈ 1:m.Nv]
-
-    return MLJModelInterface.table(ξmeans; names=names)
-end
-
-
-
-
-# Note that the interface changed a bit...
-function predict_responsibility(m::MLJBase.Machine{GTM, GTM, true}, Data_new)
-    Xnew = MLJModelInterface.matrix(Data_new)
-    gtm = fitted_params(m)[:gtm]
-    return responsibility(gtm, Xnew)
-end
-
-
-function predict_responsibility(m::MLJBase.Machine{GSM, GSM, true}, Data_new)
-    Xnew = MLJModelInterface.matrix(Data_new)
-    gsm = fitted_params(m)[:gsm]
-    return responsibility(gsm, Xnew)
-end
-
+# ---------------------------------------------------------------------------
+# ---------- DOCS -----------------------------------------------------------
+# ---------------------------------------------------------------------------
 
 
 
@@ -327,7 +146,7 @@ Train the machine with `fit!(mach, rows=...)`.
 - `m=5`:  There are `m²` total RBFs.
 - `s=1.0`: Scale factor for RBF variance.
 - `Nv=3`: Number of vertices for the simplex. Alternatively, the number of model endmembers.
-- `α=0.1`:  Model weight regularization parameter (0.0 for no regularization)
+- `λ=0.1`:  Model weight regularization parameter (0.0 for no regularization)
 - `tol=0.1`: Tolerance used for determining convergence during expectation-maximization fitting.
 - `nepochs=100`: Maximum number of training epochs.
 - `nrepeats=4`: Number of steps to repeat at/below `tol` before GTM is considered converged.
