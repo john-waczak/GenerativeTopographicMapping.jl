@@ -1,13 +1,13 @@
 module GenerativeTopographicMapping
 
 include("gtm-mlj.jl")
-include("gsm-mlj.jl")
+include("gsm-log-mlj.jl")
 
-export GSM
+export GSMLog
+
 export DataMeans, DataModes
 export responsibility
 export predict_responsibility
-
 
 
 
@@ -18,7 +18,7 @@ export predict_responsibility
 
 
 MLJModelInterface.metadata_pkg.(
-    [GTM, GSM,],
+    [GTM, GSMLog,],
     name = "GenerativeTopographicMapping",
     uuid = "110c1e60-17ba-4aeb-8cee-444277a6d160", # see your Project.toml
     url  = "https://github.com/john-waczak/GenerativeTopographicMapping.jl",
@@ -37,11 +37,11 @@ MLJModelInterface.metadata_model(
 )
 
 MLJModelInterface.metadata_model(
-    GSM,
+    GSMLog,
     input_scitype = MLJModelInterface.Table(MLJModelInterface.Continuous),
     output_scitype  = MLJModelInterface.Table(MLJModelInterface.Continuous),
     supports_weights = false,
-	  load_path    = "GenerativeTopographicMapping.GSM"
+	  load_path    = "GenerativeTopographicMapping.GSMLog"
 )
 
 
@@ -119,14 +119,14 @@ GTM
 
 
 
-const DOC_GSM= ""*
+const DOC_GSMLog= ""*
     ""*
     ""
 
 
 
 """
-$(MLJModelInterface.doc_header(GSM))
+$(MLJModelInterface.doc_header(GSMLog))
 
 Generative Simplex Mapping based based on [Generative Topographic Mapping](https://direct.mit.edu/neco/article/10/1/215-234/6127),
   Neural Computation; Bishop, C.; (1998):
@@ -159,7 +159,7 @@ Train the machine with `fit!(mach, rows=...)`.
 # Fitted parameters
 The fields of `fitted_params(mach)` are:
 
-- `gsm`: The `GenerativeSimplexMap` object fit by the `GSM` model. Contains node coordinates, RBF means, RBF variance, weights, etc.
+- `gsm`: The `GenerativeSimplexMap` object fit by the `GSMLog` model. Contains node coordinates, RBF means, RBF variance, weights, etc.
 
 
 # Report
@@ -176,7 +176,7 @@ The fields of `report(mach)` are:
 # Examples
 ```
 using MLJ
-gsm = @load GSM pkg=GenerativeTopographicMapping
+gsm = @load GSMLog pkg=GenerativeTopographicMapping
 model = gsm()
 X, y = make_blob(100, 10; centers=5) # synthetic data
 mach = machine(model, X) |> fit!
@@ -186,7 +186,7 @@ rpt = report(mach)
 classes = rpt.classes
 ```
 """
-GSM
+GSMLog
 
 
 

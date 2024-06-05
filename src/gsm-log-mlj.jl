@@ -1,15 +1,16 @@
-include("gsm-base.jl")
+include("gsm-log-base.jl")
 
 using MLJModelInterface
 import MLJBase
 
 
-mutable struct GSM <: MLJModelInterface.Unsupervised
+mutable struct GSMLog <: MLJModelInterface.Unsupervised
     k::Int
     m::Int
     Nv::Int
     s::Float64
     λ::Float64
+    α::Vector{Float64}
     nepochs::Int
     tol::Float64
     nconverged::Int
@@ -17,15 +18,16 @@ mutable struct GSM <: MLJModelInterface.Unsupervised
 end
 
 
-function GSM(; k=10, m=5, Nv=3, s=1.0, λ=0.1, nepochs=100, tol=1e-3, nconverged=4, rand_init=false)
-    model = GSM(k, m, Nv, s, λ, nepochs, tol, nconverged, rand_init)
+
+function GSMLog(; k=10, m=5, Nv=3, s=1.0, λ=0.1, α=ones(3), nepochs=100, tol=1e-3, nconverged=4, rand_init=false)
+    model = GSMLog(k, m, Nv, s, λ, α, nepochs, tol, nconverged, rand_init)
     message = MLJModelInterface.clean!(model)
     isempty(message) || @warn message
     return model
 end
 
 
-function MLJModelInterface.clean!(m::GSM)
+function MLJModelInterface.clean!(m::GSMLog)
     warning =""
 
     if m.k ≤ 0
@@ -53,6 +55,11 @@ function MLJModelInterface.clean!(m::GSM)
         m.λ = 0.1
     end
 
+    if any(m.α .≤ 0)
+        warning *= "Parameter vector `α` expected to be positive, resetting to [1,...,1]\n"
+        m.α = ones(m.Nv)
+    end
+
     if m.nepochs ≤ 0
         warning *= "Parameter `nepochs` expected to be positive, resetting to 100\n"
         m.nepochs = 100
@@ -71,25 +78,11 @@ function MLJModelInterface.clean!(m::GSM)
     return warning
 end
 
-# MLJModelInterface.@mlj_model mutable struct GSM <: MLJModelInterface.Unsupervised
-#     k::Int = 10::(_ > 0)                              # nodes per edge
-#     m::Int = 5::(_ > 0)                               # rbf per edge
-#     Nv::Int = 3::(_ > 0)                              # n-vertices, i.e. n-endmembers
-#     s::Float64 = 1.0::(_ > 0)                         # rbf variance scale factor
-#     λ::Float64 = 0.1::(_ ≥ 0)                         # weight sparsity parameter
-#     nepochs::Int = 100::(_ ≥ 1)                       # max number of EM steps
-#     tol::Float64 = 1e-3::(_ > 0)                      # fitting tolerance for llh
-#     nconverged::Int = 4::(_ ≥ 1)                      # number of steps below tol before conv.
-#     rand_init::Bool = false::(_ in (false, true))     # random weights or PCA init.
-# end
 
 
 
 
-
-
-
-function MLJModelInterface.fit(m::GSM, verbosity, Datatable)
+function MLJModelInterface.fit(m::GSMLog, verbosity, Datatable)
     # assume that X is a table
     X = MLJModelInterface.matrix(Datatable)
 
@@ -100,7 +93,7 @@ function MLJModelInterface.fit(m::GSM, verbosity, Datatable)
     end
 
     # 1. build the GTM
-    gsm = GSMBase(m.k, m.m, m.s, m.Nv, X; rand_init=m.rand_init)
+    gsm = GSMLogBase(m.k, m.m, m.s, m.Nv, m.α, X; rand_init=m.rand_init)
 
     # 2. Fit the GTM
     converged, llhs, AIC, BIC = fit!(
@@ -136,10 +129,10 @@ end
 
 
 
-MLJModelInterface.fitted_params(m::GSM, fitresult) = (gsm=fitresult,)
+MLJModelInterface.fitted_params(m::GSMLog, fitresult) = (gsm=fitresult,)
 
 
-function MLJModelInterface.predict(m::GSM, fitresult, Data_new)
+function MLJModelInterface.predict(m::GSMLog, fitresult, Data_new)
     # Return the mode index as a class label
     Xnew = MLJModelInterface.matrix(Data_new)
     n_nodes = binomial(m.k + m.Nv - 2, m.Nv - 1)
@@ -150,7 +143,7 @@ end
 
 
 
-function MLJModelInterface.transform(m::GSM, fitresult, Data_new)
+function MLJModelInterface.transform(m::GSMLog, fitresult, Data_new)
     # return a table with the mean ξ₁ and ξ₂ for each record
     Xnew = MLJModelInterface.matrix(Data_new)
     ξmeans = DataMeans(fitresult, Xnew)
@@ -162,7 +155,7 @@ end
 
 
 
-function predict_responsibility(m::MLJBase.Machine{GSM, GSM, true}, Data_new)
+function predict_responsibility(m::MLJBase.Machine{GSMLog, GSMLog, true}, Data_new)
     Xnew = MLJModelInterface.matrix(Data_new)
     gsm = fitted_params(m)[:gsm]
     return responsibility(gsm, Xnew)

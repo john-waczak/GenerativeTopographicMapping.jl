@@ -119,7 +119,7 @@ end
 
 
 
-@testset "gsm-base.jl" begin
+@testset "gsm-log-base.jl" begin
     Nₑ = 5  # nodes per edge
     Nᵥ = 3  # number of vertices
     D = Nᵥ - 1
@@ -134,7 +134,7 @@ end
     m = 5
     s = 0.1
     Nᵥ = 3
-    gsm = GenerativeTopographicMapping.GSMBase(k,m,s, Nᵥ, X)
+    gsm = GenerativeTopographicMapping.GSMLogBase(k,m,s, Nᵥ, ones(Nᵥ), X)
 
     Ξ = gsm.Ξ
     M = gsm.M
@@ -143,7 +143,7 @@ end
 end
 
 
-@testset "GSM MLJ Interface" begin
+@testset "GSM Log MLJ Interface" begin
     Nₑ = 5  # nodes per edge
     Nᵥ = 3  # number of vertices
     D = Nᵥ - 1
@@ -152,7 +152,7 @@ end
     # generate synthetic dataset for testing with 100 data points, 10 features, and 5 classes
     X = Tables.table(rand(100,10))
 
-    model = GSM(k=Nₑ, Nv=Nᵥ)
+    model = GSMLog(k=Nₑ, Nv=Nᵥ)
     m = machine(model, X)
     fit!(m, verbosity=0)
 
