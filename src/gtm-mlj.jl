@@ -107,7 +107,7 @@ function MLJModelInterface.fit(m::GTM, verbosity, Datatable)
               :W => gtm.W,
               :β⁻¹ => gtm.β⁻¹,
               :Φ => gtm.Φ,
-              :Ψ => gsm.W*gsm.Φ',
+              :Ψ => gtm.W*gtm.Φ',
               :Ξ => gtm.Ξ,
               :llhs => llhs,
               :converged => converged,

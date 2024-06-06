@@ -131,6 +131,7 @@ The fields of `report(mach)` are:
 - `β⁻¹`: the fitted GTM variance
 - `Φ`: the node RBF activation matrix
 - `Ξ`: the node coordinates in the latent space
+- `Ψ`: the projected node means in the data space
 - `llhs`: the log-likelihood values from each iteration of the training loop
 - `converged`: is `true` if the convergence critera were met before reaching `niter`
 - `AIC`: the Aikike Information Criterion
@@ -204,6 +205,7 @@ The fields of `report(mach)` are:
 - `W`: the fitted GTM weight matrix
 - `β⁻¹`: the fitted GTM variance
 - `Φ`: the node RBF activation matrix
+- `Ψ`: the projected node means in the data space
 - `Ξ`: the node coordinates in the latent space
 - `llhs`: the log-likelihood values from each iteration of the training loop
 - `converged`: is `true` if the convergence critera were met before reaching `niter`
@@ -255,7 +257,6 @@ Train the machine with `fit!(mach, rows=...)`.
 - `Nv=3`: Number of vertices for the simplex. Alternatively, the number of model endmembers.
 - `λ=0.1`:  Model weight regularization parameter (0.0 for no regularization)
 - `tol=0.1`: Tolerance used for determining convergence during expectation-maximization fitting.
-- `η=0.001`: Learning rate used for gradient update during M-step of expectation-maximization fitting.
 - `nepochs=100`: Maximum number of training epochs.
 - `nrepeats=4`: Number of steps to repeat at/below `tol` before GTM is considered converged.
 
@@ -274,6 +275,7 @@ The fields of `report(mach)` are:
 - `W`: the fitted GTM weight matrix
 - `β⁻¹`: the fitted GTM variance
 - `Φ`: the node RBF activation matrix
+- `Ψ`: the projected node means in the data space
 - `Ξ`: the node coordinates in the latent space
 - `llhs`: the log-likelihood values from each iteration of the training loop
 - `converged`: is `true` if the convergence critera were met before reaching `niter`
