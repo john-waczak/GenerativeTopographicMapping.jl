@@ -40,8 +40,10 @@ function GSMBase(k, m, s, Nᵥ, α, X; rand_init=false, rng=mk_rng(123), linear_
 
     # for linear-mixing only, don't include RBFs
     if linear_only
-        Φ = ones(n_nodes, Nᵥ + 1)
-        Φ[:, 1:end-1] .= Ξ
+        # Φ = ones(n_nodes, Nᵥ + 1)
+        # Φ[:, 1:end-1] .= Ξ
+
+        Φ = Ξ
     end
 
     # 6. perform PCA on data to get principle component variances
@@ -68,6 +70,10 @@ function GSMBase(k, m, s, Nᵥ, α, X; rand_init=false, rng=mk_rng(123), linear_
 
     if rand_init
         W = rand(rng, n_features, n_rbf_centers + Nᵥ + 1)
+        if linear_only
+            # W = rand(rng, n_features, Nᵥ + 1)
+            W = rand(rng, n_features, Nᵥ)
+        end
     end
 
     # 8. Initialize data manifold Ψ using W and Φ
@@ -122,7 +128,7 @@ end
 
 
 
-function fit!(gsm::GSMBase, X; λ = 0.1, nepochs=100, tol=1e-3, nconverged=5, verbose=false)
+function fit!(gsm::GSMBase, X; λ = 0.1, nepochs=100, tol=1e-3, nconverged=5, verbose=false, make_positive=false)
     # get the needed dimensions
     N,D = size(X)
 
@@ -144,6 +150,14 @@ function fit!(gsm::GSMBase, X; λ = 0.1, nepochs=100, tol=1e-3, nconverged=5, ve
     converged = false
 
     for i in 1:nepochs
+
+        # if desired, force weights to be positive.
+        if make_positive
+            gsm.W = max.(gsm.W, 0.0)
+        end
+
+
+
         # EXPECTATION
         mul!(gsm.Ψ, gsm.W, gsm.Φ')                             # update latent node means
         pairwise!(sqeuclidean, gsm.Δ², gsm.Ψ, X', dims=2)    # update distance matrix
@@ -186,6 +200,12 @@ function fit!(gsm::GSMBase, X; λ = 0.1, nepochs=100, tol=1e-3, nconverged=5, ve
         mul!(RHS, gsm.Φ', RX)                              # update right-hand-side
 
         gsm.W = (LHS\RHS)'                                 # update weights
+
+        # enforce positivity of weights
+        # if desired, force weights to be positive.
+        if make_positive
+            gsm.W = max.(gsm.W, 0.0)
+        end
 
         mul!(gsm.Ψ, gsm.W, gsm.Φ')                         # update means
         pairwise!(sqeuclidean, gsm.Δ², gsm.Ψ, X', dims=2)  # update distance matrix

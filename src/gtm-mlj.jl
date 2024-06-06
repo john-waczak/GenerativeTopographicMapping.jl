@@ -1,9 +1,3 @@
-# include("gtm-base.jl")
-
-# using MLJModelInterface
-# import MLJBase
-
-
 mutable struct GTM<: MLJModelInterface.Unsupervised
     k::Int
     m::Int
@@ -107,7 +101,7 @@ function MLJModelInterface.fit(m::GTM, verbosity, Datatable)
               :W => gtm.W,
               :β⁻¹ => gtm.β⁻¹,
               :Φ => gtm.Φ,
-              :Ψ => gtm.W*gtm.Φ',
+              :node_data_means => gtm.W*gtm.Φ',
               :Ξ => gtm.Ξ,
               :llhs => llhs,
               :converged => converged,

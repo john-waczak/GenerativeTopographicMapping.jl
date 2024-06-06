@@ -12,6 +12,7 @@ mutable struct GSM<: MLJModelInterface.Unsupervised
     λ::Float64
     α::Vector{Float64}
     linear_only::Bool
+    make_positive::Bool
     nepochs::Int
     tol::Float64
     nconverged::Int
@@ -21,8 +22,8 @@ end
 
 
 
-function GSM(; k=10, m=5, Nv=3, s=1.0, λ=0.1, α=ones(3), linear_only=false, η=0.001, nepochs=100, tol=1e-3, nconverged=4, rand_init=false, rng=123)
-    model = GSM(k, m, Nv, s, λ, α, linear_only, nepochs, tol, nconverged, rand_init, mk_rng(rng))
+function GSM(; k=10, m=5, Nv=3, s=1.0, λ=0.1, α=ones(3), linear_only=false, make_positive=false, η=0.001, nepochs=100, tol=1e-3, nconverged=4, rand_init=false, rng=123)
+    model = GSM(k, m, Nv, s, λ, α, linear_only, make_positive, nepochs, tol, nconverged, rand_init, mk_rng(rng))
     message = MLJModelInterface.clean!(model)
     isempty(message) || @warn message
     return model
@@ -105,19 +106,20 @@ function MLJModelInterface.fit(m::GSM, verbosity, Datatable)
         tol=m.tol,
         nconverged=m.nconverged,
         verbose=verbose,
+        make_positive=m.make_positive
     )
 
     # 3. Collect results
     cache = nothing
 
     # get indices of vertices
-    idx_vertices = vcat([findall(gsm.Ξ[:,j] .== 1) for j ∈ axes(gsm.Ξ,2)]...)
+    idx_vertices = vcat([findall(isapprox.(gsm.Ξ[:,j], 1, atol=1e-8)) for j ∈ axes(gsm.Ξ,2)]...)
 
     report = (;
               :W => gsm.W,
               :β⁻¹ => gsm.β⁻¹,
               :Φ => gsm.Φ,
-              :Ψ => gsm.W*gsm.Φ',
+              :node_data_means => gsm.W*gsm.Φ',
               :Ξ => gsm.Ξ,
               :llhs => llhs,
               :converged => converged,

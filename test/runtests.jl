@@ -114,7 +114,7 @@ end
     @test Set([:gtm]) == Set(keys(fp))
 
     rpt = report(m)
-    @test Set([:W, :β⁻¹, :Φ, :Ψ, :Ξ, :llhs, :converged, :AIC, :BIC]) == Set(keys(rpt))
+    @test Set([:W, :β⁻¹, :Φ, :node_data_means, :Ξ, :llhs, :converged, :AIC, :BIC]) == Set(keys(rpt))
 end
 
 
@@ -170,7 +170,7 @@ end
 
     rpt = report(m)
 
-    @test Set([:W, :β⁻¹, :Φ, :Ψ, :Ξ, :llhs, :converged, :AIC, :BIC, :idx_vertices]) == Set(keys(rpt))
+    @test Set([:W, :β⁻¹, :Φ, :node_data_means, :Ξ, :llhs, :converged, :AIC, :BIC, :idx_vertices]) == Set(keys(rpt))
 
 end
 
@@ -228,7 +228,7 @@ end
     @test Set([:gsm]) == Set(keys(fp))
 
     rpt = report(m)
-    @test Set([:W, :β⁻¹, :Φ, :Ψ, :Ξ, :llhs, :converged, :AIC, :BIC, :idx_vertices]) == Set(keys(rpt))
+    @test Set([:W, :β⁻¹, :Φ, :node_data_means, :Ξ, :llhs, :converged, :AIC, :BIC, :idx_vertices]) == Set(keys(rpt))
 
     # this should be guarenteed by ELU and choice of basis function
     @test all(fp[:gsm].Ψ .≥ 0)
@@ -239,6 +239,6 @@ end
     m = machine(model, X)
     fit!(m, verbosity=0)
     rpt = report(m)
-    @test size(rpt[:Φ], 2) == Nᵥ + 1
+    @test size(rpt[:Φ], 2) == Nᵥ
 end
 
