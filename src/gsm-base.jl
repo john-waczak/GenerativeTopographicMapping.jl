@@ -13,7 +13,7 @@ end
 
 
 
-function GSMBase(k, m, s, Nᵥ, α, X; rand_init=false, rng=mk_rng(123))
+function GSMBase(k, m, s, Nᵥ, α, X; rand_init=false, rng=mk_rng(123), linear_only=false)
     # 1. define grid parameters
     n_records, n_features = size(X)
     n_nodes = binomial(k + Nᵥ - 2, Nᵥ - 1)
@@ -36,6 +36,12 @@ function GSMBase(k, m, s, Nᵥ, α, X; rand_init=false, rng=mk_rng(123))
         pairwise!(sqeuclidean, Δ², Ξ, M, dims=1)
         Φ[:, 1:end-Nᵥ-1] .= exp.(-Δ² ./ (2*σ^2))
         Φ[:, end-Nᵥ:end-1] .= Ξ
+    end
+
+    # for linear-mixing only, don't include RBFs
+    if linear_only
+        Φ = ones(n_nodes, Nᵥ + 1)
+        Φ[:, 1:end-1] .= Ξ
     end
 
     # 6. perform PCA on data to get principle component variances

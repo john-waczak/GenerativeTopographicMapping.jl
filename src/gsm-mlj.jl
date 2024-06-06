@@ -11,6 +11,7 @@ mutable struct GSM<: MLJModelInterface.Unsupervised
     s::Float64
     λ::Float64
     α::Vector{Float64}
+    linear_only::Bool
     nepochs::Int
     tol::Float64
     nconverged::Int
@@ -20,8 +21,8 @@ end
 
 
 
-function GSM(; k=10, m=5, Nv=3, s=1.0, λ=0.1, α=ones(3), η=0.001, nepochs=100, tol=1e-3, nconverged=4, rand_init=false, rng=123)
-    model = GSM(k, m, Nv, s, λ, α, nepochs, tol, nconverged, rand_init, mk_rng(rng))
+function GSM(; k=10, m=5, Nv=3, s=1.0, λ=0.1, α=ones(3), linear_only=false, η=0.001, nepochs=100, tol=1e-3, nconverged=4, rand_init=false, rng=123)
+    model = GSM(k, m, Nv, s, λ, α, linear_only, nepochs, tol, nconverged, rand_init, mk_rng(rng))
     message = MLJModelInterface.clean!(model)
     isempty(message) || @warn message
     return model
@@ -93,7 +94,7 @@ function MLJModelInterface.fit(m::GSM, verbosity, Datatable)
     end
 
     # 1. build the GTM
-    gsm = GSMBase(m.k, m.m, m.s, m.Nv, m.α, X; rand_init=m.rand_init, rng=m.rng)
+    gsm = GSMBase(m.k, m.m, m.s, m.Nv, m.α, X; rand_init=m.rand_init, rng=m.rng, linear_only=m.linear_only)
 
     # 2. Fit the GTM
     converged, llhs, AIC, BIC = fit!(

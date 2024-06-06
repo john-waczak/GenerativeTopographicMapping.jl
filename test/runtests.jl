@@ -211,7 +211,7 @@ end
     # generate synthetic dataset for testing with 100 data points, 10 features, and 5 classes
     X = Tables.table(rand(rng, 100,10))
 
-    model = GSM(k=Nₑ, Nv=Nᵥ, η=0.001, nepochs=250, rng=rng)
+    model = GSM(k=Nₑ, Nv=Nᵥ, nepochs=100, rng=rng)
     m = machine(model, X)
     fit!(m, verbosity=0)
 
@@ -232,5 +232,13 @@ end
 
     # this should be guarenteed by ELU and choice of basis function
     @test all(fp[:gsm].Ψ .≥ 0)
+
+
+    # do same but for linear-only model
+    model = GSM(k=Nₑ, Nv=Nᵥ, nepochs=100, rng=rng, linear_only=true)
+    m = machine(model, X)
+    fit!(m, verbosity=0)
+    rpt = report(m)
+    @test size(rpt[:Φ], 2) == Nᵥ + 1
 end
 
