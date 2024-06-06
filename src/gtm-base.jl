@@ -1,9 +1,3 @@
-using LinearAlgebra
-using Statistics, MultivariateStats
-using Distances
-using LogExpFunctions
-using ProgressMeter
-
 mutable struct GTMBase{T1 <: AbstractArray, T2 <: AbstractArray, T3 <: AbstractArray, T4 <: AbstractArray, T5 <: AbstractArray, T6 <: AbstractArray, T7 <: AbstractArray}
     Ξ::T1
     M::T2
@@ -16,7 +10,7 @@ mutable struct GTMBase{T1 <: AbstractArray, T2 <: AbstractArray, T3 <: AbstractA
 end
 
 
-function GTMBase(k, m, s, X; rand_init=false, topology=:square)
+function GTMBase(k, m, s, X; rand_init=false, topology=:square, rng=mk_rng(123))
     # 1. define grid parameters
     n_records, n_features = size(X)
     n_nodes = k*k
@@ -84,7 +78,7 @@ function GTMBase(k, m, s, X; rand_init=false, topology=:square)
     W = U*Ξnorm' * pinv(Φ')
 
     if rand_init
-        W = rand(n_features, n_rbf_centers+1)
+        W = rand(rng, n_features, n_rbf_centers+1)
     end
 
     # 8. Initialize data manifold Ψ using W and Φ
@@ -107,7 +101,7 @@ end
 
 
 
-function fit!(gtm::GTMBase, X; α = 0.1, nepochs=100, tol=1e-3, nconverged=5, verbose=false)
+function fit!(gtm::GTMBase, X; λ = 0.1, nepochs=100, tol=1e-3, nconverged=5, verbose=false)
     # get the needed dimensions
     N,D = size(X)
     K = size(gtm.Ξ,1)
@@ -164,8 +158,8 @@ function fit!(gtm::GTMBase, X; α = 0.1, nepochs=100, tol=1e-3, nconverged=5, ve
 
         # MAXIMIZATION
         mul!(LHS, gtm.Φ', GΦ)                              # update left-hand-side
-        if α > 0
-            LHS[diagind(LHS)] .+= α * gtm.β⁻¹               # add regularization
+        if λ > 0
+            LHS[diagind(LHS)] .+= λ * gtm.β⁻¹               # add regularization
         end
         mul!(RHS, gtm.Φ', RX)                              # update right-hand-side
 

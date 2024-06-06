@@ -1,20 +1,77 @@
-include("gtm-base.jl")
+# include("gtm-base.jl")
 
-using MLJModelInterface
-import MLJBase
+# using MLJModelInterface
+# import MLJBase
 
 
-MLJModelInterface.@mlj_model mutable struct GTM <: MLJModelInterface.Unsupervised
-    k::Int = 16::(_ > 0)
-    m::Int = 4::(_ > 0)
-    s::Float64 = 2.0::(_ > 0)
-    α::Float64 = 0.1::(_ ≥ 0)
-    topology::Symbol = :square::(_ in (:square, :cylinder, :torus))
-    nepochs::Int = 100::(_ ≥ 1)
-    batchsize::Int = 0::(_ ≥ 0)
-    tol::Float64 = 1e-3::(_ > 0)
-    nconverged::Int = 4::(_ ≥ 1)
-    rand_init::Bool = false::(_ in (false, true))
+mutable struct GTM<: MLJModelInterface.Unsupervised
+    k::Int
+    m::Int
+    s::Float64
+    λ::Float64
+    topology::Symbol
+    nepochs::Int
+    tol::Float64
+    nconverged::Int
+    rand_init::Bool
+    rng::Any
+end
+
+
+
+function GTM(; k=16, m=4, s=1.0, λ=0.1, topology=:square, nepochs=100, tol=1e-3, nconverged=4, rand_init=false, rng=123)
+    model = GTM(k, m, s, λ, topology, nepochs, tol, nconverged, rand_init, mk_rng(rng))
+    message = MLJModelInterface.clean!(model)
+    isempty(message) || @warn message
+    return model
+end
+
+
+
+function MLJModelInterface.clean!(m::GTM)
+    warning =""
+
+    if m.k ≤ 0
+        warning *= "Parameter `k` expected to be positive, resetting to 16\n"
+        m.k = 16
+    end
+
+    if m.m ≤ 0
+        warning *= "Parameter `m` expected to be positive, resetting to 4\n"
+        m.m = 4
+    end
+
+    if m.s ≤ 0
+        warning *= "Parameter `s` expected to be positive, resetting to 1.0\n"
+        m.s = 1.0
+    end
+
+    if m.λ < 0
+        warning *= "Parameter `λ` expected to be non-negative, resetting to 0.1\n"
+        m.λ = 0.1
+    end
+
+    if !(m.topology ∈ [:square, :cylinder, :torus])
+        warning *= "Parameter `topology` expected to be one of `[:square, :cylinder, :torus]`, resetting to `:square`\n"
+        m.topology = :square
+    end
+
+    if m.nepochs ≤ 0
+        warning *= "Parameter `nepochs` expected to be positive, resetting to 100\n"
+        m.nepochs = 100
+    end
+
+    if m.tol ≤ 0
+        warning *= "Parameter `tol` expected to be positive, resetting to 1e-3\n"
+        m.tol = 1e-3
+    end
+
+    if m.nconverged < 0
+        warning *= "Parameter `nconverged` expected to be non-negative, resetting to 4\n"
+        m.nconverged = 4
+    end
+
+    return warning
 end
 
 
@@ -22,13 +79,6 @@ end
 function MLJModelInterface.fit(m::GTM, verbosity, Datatable)
     # assume that X is a table
     X = MLJModelInterface.matrix(Datatable)
-
-    batchsize = m.batchsize
-    if batchsize ≥ size(X,1)
-        println("Batch size is ≥ number of records. Setting batch size to n records...")
-        batchsize=0
-    end
-
 
     if verbosity > 0
         verbose = true
@@ -38,13 +88,13 @@ function MLJModelInterface.fit(m::GTM, verbosity, Datatable)
 
 
     # 1. build the GTM
-    gtm = GTMBase(m.k, m.m, m.s, X; topology=m.topology, rand_init=m.rand_init)
+    gtm = GTMBase(m.k, m.m, m.s, X; topology=m.topology, rand_init=m.rand_init, )
 
     # 2. Fit the GTM
     converged, llhs, AIC, BIC = fit!(
         gtm,
         X,
-        α = m.α,
+        λ = m.λ,
         nepochs=m.nepochs,
         tol=m.tol,
         nconverged=m.nconverged,
@@ -57,6 +107,7 @@ function MLJModelInterface.fit(m::GTM, verbosity, Datatable)
               :W => gtm.W,
               :β⁻¹ => gtm.β⁻¹,
               :Φ => gtm.Φ,
+              :Ψ => gsm.W*gsm.Φ',
               :Ξ => gtm.Ξ,
               :llhs => llhs,
               :converged => converged,

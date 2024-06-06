@@ -1,6 +1,3 @@
-using Combinatorics
-using LinearAlgebra
-
 function get_barycentric_grid_coords(Nₑ, Nᵥ)
     D = Nᵥ - 1
     Npts = binomial(Nₑ+D-1, D)

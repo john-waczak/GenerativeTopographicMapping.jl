@@ -1,34 +1,34 @@
-# include("gsm-log-base.jl")
+# include("gsm-base.jl")
 
 # using MLJModelInterface
 # import MLJBase
 
 
-mutable struct GSMLog <: MLJModelInterface.Unsupervised
+mutable struct GSM<: MLJModelInterface.Unsupervised
     k::Int
     m::Int
     Nv::Int
     s::Float64
     λ::Float64
     α::Vector{Float64}
+    η::Float64
     nepochs::Int
     tol::Float64
     nconverged::Int
-    rand_init::Bool
     rng::Any
 end
 
 
 
-function GSMLog(; k=10, m=5, Nv=3, s=1.0, λ=0.1, α=ones(3), nepochs=100, tol=1e-3, nconverged=4, rand_init=false, rng=123)
-    model = GSMLog(k, m, Nv, s, λ, α, nepochs, tol, nconverged, rand_init, mk_rng(rng))
+function GSM(; k=10, m=5, Nv=3, s=1.0, λ=0.1, α=ones(3), η=0.001, nepochs=100, tol=1e-3, nconverged=4, rng=123)
+    model = GSM(k, m, Nv, s, λ, α, η, nepochs, tol, nconverged, mk_rng(rng))
     message = MLJModelInterface.clean!(model)
     isempty(message) || @warn message
     return model
 end
 
 
-function MLJModelInterface.clean!(m::GSMLog)
+function MLJModelInterface.clean!(m::GSM)
     warning =""
 
     if m.k ≤ 0
@@ -61,6 +61,11 @@ function MLJModelInterface.clean!(m::GSMLog)
         m.α = ones(m.Nv)
     end
 
+    if m.η < 0
+        warning *= "Parameter `η` expected to be non-negative, resetting to 0.001\n"
+        m.η = 0.001
+    end
+
     if m.nepochs ≤ 0
         warning *= "Parameter `nepochs` expected to be positive, resetting to 100\n"
         m.nepochs = 100
@@ -82,8 +87,7 @@ end
 
 
 
-
-function MLJModelInterface.fit(m::GSMLog, verbosity, Datatable)
+function MLJModelInterface.fit(m::GSM, verbosity, Datatable)
     # assume that X is a table
     X = MLJModelInterface.matrix(Datatable)
 
@@ -94,13 +98,14 @@ function MLJModelInterface.fit(m::GSMLog, verbosity, Datatable)
     end
 
     # 1. build the GTM
-    gsm = GSMLogBase(m.k, m.m, m.s, m.Nv, m.α, X; rand_init=m.rand_init)
+    gsm = GSMBase(m.k, m.m, m.s, m.Nv, m.α, X)
 
     # 2. Fit the GTM
     converged, llhs, AIC, BIC = fit!(
         gsm,
         X,
         λ = m.λ,
+        η = m.η,
         nepochs=m.nepochs,
         tol=m.tol,
         nconverged=m.nconverged,
@@ -117,7 +122,7 @@ function MLJModelInterface.fit(m::GSMLog, verbosity, Datatable)
               :W => gsm.W,
               :β⁻¹ => gsm.β⁻¹,
               :Φ => gsm.Φ,
-              :Ψ => gsm.W*gsm.Φ',
+              :Ψ => ELU.(gsm.W)*gsm.Φ',
               :Ξ => gsm.Ξ,
               :llhs => llhs,
               :converged => converged,
@@ -131,10 +136,10 @@ end
 
 
 
-MLJModelInterface.fitted_params(m::GSMLog, fitresult) = (gsm=fitresult,)
+MLJModelInterface.fitted_params(m::GSM, fitresult) = (gsm=fitresult,)
 
 
-function MLJModelInterface.predict(m::GSMLog, fitresult, Data_new)
+function MLJModelInterface.predict(m::GSM, fitresult, Data_new)
     # Return the mode index as a class label
     Xnew = MLJModelInterface.matrix(Data_new)
     n_nodes = binomial(m.k + m.Nv - 2, m.Nv - 1)
@@ -145,7 +150,7 @@ end
 
 
 
-function MLJModelInterface.transform(m::GSMLog, fitresult, Data_new)
+function MLJModelInterface.transform(m::GSM, fitresult, Data_new)
     # return a table with the mean ξ₁ and ξ₂ for each record
     Xnew = MLJModelInterface.matrix(Data_new)
     ξmeans = DataMeans(fitresult, Xnew)
@@ -157,11 +162,13 @@ end
 
 
 
-function predict_responsibility(m::MLJBase.Machine{GSMLog, GSMLog, true}, Data_new)
+function predict_responsibility(m::MLJBase.Machine{GSM, GSM, true}, Data_new)
     Xnew = MLJModelInterface.matrix(Data_new)
     gsm = fitted_params(m)[:gsm]
     return responsibility(gsm, Xnew)
 end
+
+
 
 
 

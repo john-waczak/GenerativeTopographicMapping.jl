@@ -1,4 +1,4 @@
-mutable struct GSMLogBase{T1 <: AbstractArray, T2 <: AbstractArray, T3 <: AbstractArray, T4 <: AbstractArray, T5 <: AbstractArray, T6 <: AbstractArray, T7 <: AbstractArray}
+mutable struct GSMBase{T1 <: AbstractArray, T2 <: AbstractArray, T3 <: AbstractArray, T4 <: AbstractArray, T5 <: AbstractArray, T6 <: AbstractArray, T7 <: AbstractArray}
     Ξ::T1                 # Latent coordinates
     M::T2                 # RBF coordinates
     Φ::T3                 # RBF activations
@@ -13,8 +13,12 @@ end
 
 
 
+ELU(x) = (x ≥ 0) ? (x + 1)  : exp(x)
+dELU_dx(x) = (x ≥ 0) ? (1) : exp(x)
+InvELU(y) = (y ≥ 1) ? (y - 1)  : log(y)
 
-function GSMLogBase(k, m, s, Nᵥ, α, X; rand_init=false, rng=mk_rng(123))
+
+function GSMBase(k, m, s, Nᵥ, α, X; rng=mk_rng(123))
     # 1. define grid parameters
     n_records, n_features = size(X)
     n_nodes = binomial(k + Nᵥ - 2, Nᵥ - 1)
@@ -22,7 +26,6 @@ function GSMLogBase(k, m, s, Nᵥ, α, X; rand_init=false, rng=mk_rng(123))
 
     # 2. create grid of K latent nodes
     Ξ = get_barycentric_grid_coords(k, Nᵥ)'
-
 
     # 3. create grid of M rbf centers (means)
     M = get_barycentric_grid_coords(m, Nᵥ)'
@@ -40,49 +43,23 @@ function GSMLogBase(k, m, s, Nᵥ, α, X; rand_init=false, rng=mk_rng(123))
         Φ[:, end-Nᵥ:end-1] .= Ξ
     end
 
-    # 6. perform PCA on data
+    # 6. perform PCA on data to get principle component variances
+    pca_vars = zeros(Nᵥ+1)
+    let
+        Data = Array(X)
+        data_means = vec(mean(Data, dims=1))
+        D = Data' .- data_means
+        Svd = svd(D)
 
-    # use nat-log of data since we are fitting log-normal
-    Data = Array(X)
-    Data = log.(Data .+ eps(eltype(Data)))
-
-    data_means = vec(mean(Data, dims=1))
-    D = Data' .- data_means
-    Svd = svd(D)
-
-    U = Svd.U[:, 1:Nᵥ]
-    pca_vars = (abs2.(Svd.S) ./ (n_records-1))[1:Nᵥ+1]
-
-    # convert to loadings
-    for i ∈ 1:Nᵥ
-        U[:,i] .= U[:,i] .* sqrt(pca_vars[i])
+        # U = Svd.U[:, 1:Nᵥ]
+        pca_vars = (abs2.(Svd.S) ./ (n_records-1))[1:Nᵥ+1]
     end
 
-    # 7. Initialize parameter matrix W using U and Φ
-
-    Ξnorm = copy(Ξ)
-    for i ∈ 1:Nᵥ
-        Ξnorm[:,i] = (Ξnorm[:,i] .-  mean(Ξnorm[:,i])) ./ std(Ξnorm[:,i])
-    end
-    W = U*Ξnorm' * pinv(Φ')
-
-
-    if rand_init
-        W = rand(rng, n_features, n_rbf_centers + Nᵥ + 1)
-    end
-
+    # 7. Randomly initialize the weights
+    W = rand(rng, n_features, n_rbf_centers + Nᵥ + 1)
 
     # 8. Initialize data manifold Ψ using W and Φ
-    Ψ = W * Φ'
-
-    # add the means back to each row since PCA uses
-    # a mean-subtracted data matrix
-
-    if !(rand_init)
-        for i ∈ axes(Ψ,1)
-            Ψ[i,:] .= Ψ[i,:] .+ data_means[i]
-        end
-    end
+    Ψ = ELU.(W) * Φ'
 
     # 9. Set the variance parameter
     β⁻¹ = max(pca_vars[Nᵥ+1], mean(pairwise(sqeuclidean, Ψ, dims=2))/2)
@@ -92,7 +69,6 @@ function GSMLogBase(k, m, s, Nᵥ, α, X; rand_init=false, rng=mk_rng(123))
     πk = zeros(n_nodes)
     f_dirichlet = Dirichlet(α)
     e = 0.5 * (1/k)  # offset to deal with Inf value on boundary
-
 
     for k ∈ axes(Ξ,1)
         p = Ξ[k,:]
@@ -112,39 +88,33 @@ function GSMLogBase(k, m, s, Nᵥ, α, X; rand_init=false, rng=mk_rng(123))
 
 
     # 11. return final GSM object
-    return GSMLogBase(Ξ, M, Φ, W, Ψ, zeros(n_nodes, n_records), R, β⁻¹, πk)
+    return GSMBase(Ξ, M, Φ, W, Ψ, zeros(n_nodes, n_records), R, β⁻¹, πk)
 end
 
 
 
-
-
-
-
-function fit!(gsm::GSMLogBase, X; λ = 0.1, nepochs=100, tol=1e-3, nconverged=5, verbose=false)
+function fit!(gsm::GSMBase, X; λ = 0.1, η=0.001, nepochs=100, tol=1e-3, nconverged=5, verbose=false)
     # get the needed dimensions
     N,D = size(X)
-
     K = size(gsm.Ξ,1)
 
     # M = size(gsm.M,1) + 1  # don't forget the bias term!
     M = size(gsm.Φ,2)
 
-    # set up the prefactor
-    LnX = log.(X .+ eps(eltype(X)))
-    ΣLnX = sum(LnX)
-
+    # log of node weights ax K×N matrix for computing responsibilities
     LnΠ = ones(size(gsm.R))
     for n ∈ axes(LnΠ,2)
         LnΠ[:,n] .= log.(gsm.πk)
     end
 
-
     prefac = 0.0
-    RLnX = zeros(K,D)
-    GΦ = zeros(K,M)
-    LHS = zeros(M,M)
-    RHS = zeros(M,D)
+
+    # RX = zeros(K,D)
+    # GΦ = zeros(K,M)
+    # LHS = zeros(M,M)
+    # RHS = zeros(M,D)
+    F = zeros(size(gsm.W))
+    Fprime = zeros(size(gsm.W))
 
     l = 0.0
     llh_prev = 0.0
@@ -154,18 +124,18 @@ function fit!(gsm::GSMLogBase, X; λ = 0.1, nepochs=100, tol=1e-3, nconverged=5,
 
     for i in 1:nepochs
         # EXPECTATION
-        mul!(gsm.Ψ, gsm.W, gsm.Φ')                             # update latent node means
-        #pairwise!(sqeuclidean, gsm.Δ², gsm.Ψ, X', dims=2)     # update distance matrix
-        pairwise!(sqeuclidean, gsm.Δ², gsm.Ψ, LnX', dims=2)    # update distance matrix
+
+        # is this allocating???
+        F .= ELU.(gsm.W)
+        Fprime .= dELU_dx.(gsm.W)
+
+        mul!(gsm.Ψ, F, gsm.Φ')                                # update latent node means
+        pairwise!(sqeuclidean, gsm.Δ², gsm.Ψ, X', dims=2)     # update distance matrix
         gsm.Δ² .*= -(1/(2*gsm.β⁻¹))
         softmax!(gsm.R, gsm.Δ² .+ LnΠ, dims=1)
 
-        mul!(GΦ, diagm(sum(gsm.R, dims=2)[:]), gsm.Φ)          # update the G matrix diagonal
-        mul!(RLnX, gsm.R, LnX)                                 # update intermediate for R.H.S
-
         # UPDATE LOG-LIKELIHOOD
-        # prefac = (N*D/2)*log(1/(2* gsm.β⁻¹* π)) - N*log(K) - ΣLnX
-        prefac = (N*D/2)*log(1/(2* gsm.β⁻¹* π)) - ΣLnX
+        prefac = (N*D/2)*log(1/(2* gsm.β⁻¹* π))
 
         if i == 1
             l = max(prefac + sum(logsumexp(gsm.Δ² .* LnΠ, dims=1)), nextfloat(typemin(1.0)))
@@ -179,7 +149,7 @@ function fit!(gsm::GSMLogBase, X; λ = 0.1, nepochs=100, tol=1e-3, nconverged=5,
             rel_diff = abs(l - llh_prev)/min(abs(l), abs(llh_prev))
 
             if rel_diff <= tol
-                # increment the number of "close" difference
+                # increment the number of "close" updates
                 nclose += 1
             end
 
@@ -189,17 +159,19 @@ function fit!(gsm::GSMLogBase, X; λ = 0.1, nepochs=100, tol=1e-3, nconverged=5,
             end
         end
 
-        # MAXIMIZATION
-        mul!(LHS, gsm.Φ', GΦ)                              # update left-hand-side
-        if λ > 0
-            LHS[diagind(LHS)] .+= λ * gsm.β⁻¹               # add regularization
-        end
-        mul!(RHS, gsm.Φ', RLnX)                              # update right-hand-side
+        # MAXIMIZATION Step
 
-        gsm.W = (LHS\RHS)'                                 # update weights
+        # 1. Update W
+        β = 1/(gsm.β⁻¹)
+        G = Diagonal(sum(gsm.R, dims=2)[:])
 
-        mul!(gsm.Ψ, gsm.W, gsm.Φ')                         # update means
-        pairwise!(sqeuclidean, gsm.Δ², gsm.Ψ, LnX', dims=2)  # update distance matrix
+        gsm.W .+= η .* (β .* (X'*gsm.R'*gsm.Φ) .* Fprime - β .*(F*gsm.Φ'*G*gsm.Φ) .* Fprime - λ .* F .* Fprime)
+        # gsm.W .= gsm.W .+ η .* (β .* (X'*gsm.R'*gsm.Φ) .* Fprime .- β .*(F*gsm.Φ'*G*gsm.Φ) .* Fprime)
+
+
+        # 2. Update β
+        mul!(gsm.Ψ, ELU.(gsm.W), gsm.Φ')                         # update means
+        pairwise!(sqeuclidean, gsm.Δ², gsm.Ψ, X', dims=2)  # update distance matrix
         gsm.β⁻¹ = sum(gsm.R .* gsm.Δ²)/(N*D)                    # update variance
 
         if verbose
@@ -217,14 +189,14 @@ end
 
 
 
-function DataMeans(gsm::GSMLogBase, X)
+function DataMeans(gsm::GSMBase, X)
     LnΠ = ones(size(gsm.R))
     for n ∈ axes(LnΠ,2)
         LnΠ[:,n] .= log.(gsm.πk)
     end
 
-    mul!(gsm.Ψ, gsm.W, gsm.Φ')
-    Δ² = pairwise(sqeuclidean, gsm.Ψ, log.(X .+ eps(eltype(X)))', dims=2)
+    mul!(gsm.Ψ, ELU.(gsm.W), gsm.Φ')
+    Δ² = pairwise(sqeuclidean, gsm.Ψ, X', dims=2)
     Δ² .*= -(1/(2*gsm.β⁻¹))
     R = softmax(Δ² .+ LnΠ, dims=1)
 
@@ -232,14 +204,14 @@ function DataMeans(gsm::GSMLogBase, X)
 end
 
 
-function DataModes(gsm::GSMLogBase, X)
+function DataModes(gsm::GSMBase, X)
     LnΠ = ones(size(gsm.R))
     for n ∈ axes(LnΠ,2)
         LnΠ[:,n] .= log.(gsm.πk)
     end
 
-    mul!(gsm.Ψ, gsm.W, gsm.Φ')
-    Δ² = pairwise(sqeuclidean, gsm.Ψ, log.(X .+ eps(eltype(X)))', dims=2)
+    mul!(gsm.Ψ, ELU.(gsm.W), gsm.Φ')
+    Δ² = pairwise(sqeuclidean, gsm.Ψ, X', dims=2)
     Δ² .*= -(1/(2*gsm.β⁻¹))
     R = softmax(Δ² .+ LnΠ, dims=1)
 
@@ -249,14 +221,14 @@ function DataModes(gsm::GSMLogBase, X)
 end
 
 
-function class_labels(gsm::GSMLogBase, X)
+function class_labels(gsm::GSMBase, X)
     LnΠ = ones(size(gsm.R))
     for n ∈ axes(LnΠ,2)
         LnΠ[:,n] .= log.(gsm.πk)
     end
 
-    mul!(gsm.Ψ, gsm.W, gsm.Φ')
-    Δ² = pairwise(sqeuclidean, gsm.Ψ, log.(X .+ eps(eltype(X)))', dims=2)
+    mul!(gsm.Ψ, ELU.(gsm.W), gsm.Φ')
+    Δ² = pairwise(sqeuclidean, gsm.Ψ, X', dims=2)
     Δ² .*= -(1/(2*gsm.β⁻¹))
     R = softmax(Δ² .+ LnΠ, dims=1)
 
@@ -266,14 +238,14 @@ function class_labels(gsm::GSMLogBase, X)
 end
 
 
-function responsibility(gsm::GSMLogBase, X)
+function responsibility(gsm::GSMBase, X)
     LnΠ = ones(size(gsm.R))
     for n ∈ axes(LnΠ,2)
         LnΠ[:,n] .= log.(gsm.πk)
     end
 
-    mul!(gsm.Ψ, gsm.W, gsm.Φ')
-    Δ² = pairwise(sqeuclidean, gsm.Ψ, log.(X .+ eps(eltype(X)))', dims=2)
+    mul!(gsm.Ψ, ELU.(gsm.W), gsm.Φ')
+    Δ² = pairwise(sqeuclidean, gsm.Ψ, X', dims=2)
     Δ² .*= -(1/(2*gsm.β⁻¹))
     R = softmax(Δ² .+ LnΠ, dims=1)
 
