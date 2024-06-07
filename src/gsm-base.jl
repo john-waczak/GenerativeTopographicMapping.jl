@@ -12,8 +12,7 @@ end
 
 
 
-
-function GSMBase(k, m, s, Nᵥ, α, X; rand_init=false, rng=mk_rng(123), linear_only=false)
+function GSMBase(k, m, s, Nᵥ, α, X; rand_init=false, rng=mk_rng(123), nonlinear=true, linear=false, bias=false)
     # 1. define grid parameters
     n_records, n_features = size(X)
     n_nodes = binomial(k + Nᵥ - 2, Nᵥ - 1)
@@ -30,21 +29,24 @@ function GSMBase(k, m, s, Nᵥ, α, X; rand_init=false, rng=mk_rng(123), linear_
     σ = s * (1/k)  # all side lengths are 1.0
 
     # 5. create rbf activation matrix Φ
-    Φ = ones(n_nodes, n_rbf_centers + Nᵥ + 1)
-    let
+    Φ = []
+    if nonlinear
         Δ² = zeros(size(Ξ,1), size(M,1))
         pairwise!(sqeuclidean, Δ², Ξ, M, dims=1)
-        Φ[:, 1:end-Nᵥ-1] .= exp.(-Δ² ./ (2*σ^2))
-        Φ[:, end-Nᵥ:end-1] .= Ξ
+        push!(Φ, exp.(-Δ² ./ (2*σ^2)))
     end
 
-    # for linear-mixing only, don't include RBFs
-    if linear_only
-        # Φ = ones(n_nodes, Nᵥ + 1)
-        # Φ[:, 1:end-1] .= Ξ
-
-        Φ = Ξ
+    if linear
+        push!(Φ, Ξ)
     end
+
+    if bias
+        push!(Φ, ones(size(Ξ,1)))
+    end
+
+    # join them together
+    Φ = hcat(Φ...)
+
 
     # 6. perform PCA on data to get principle component variances
     data_means = vec(mean(Array(X), dims=1))
@@ -66,14 +68,11 @@ function GSMBase(k, m, s, Nᵥ, α, X; rand_init=false, rng=mk_rng(123), linear_
     for i ∈ 1:Nᵥ
         Ξnorm[:,i] = (Ξnorm[:,i] .-  mean(Ξnorm[:,i])) ./ std(Ξnorm[:,i])
     end
+
     W = U*Ξnorm' * pinv(Φ')
 
     if rand_init
-        W = rand(rng, n_features, n_rbf_centers + Nᵥ + 1)
-        if linear_only
-            # W = rand(rng, n_features, Nᵥ + 1)
-            W = rand(rng, n_features, Nᵥ)
-        end
+        W = rand(rng, n_features, size(Φ, 2))
     end
 
     # 8. Initialize data manifold Ψ using W and Φ
@@ -100,18 +99,21 @@ function GSMBase(k, m, s, Nᵥ, α, X; rand_init=false, rng=mk_rng(123), linear_
     for k ∈ axes(Ξ,1)
         p = Ξ[k,:]
         for l ∈ axes(Ξ, 2)
-            p[l] = e
+            if isapprox(Ξ[k,l], 0.0, atol=1e-6)
+                p[l] = e
+            end
         end
         p = p ./ sum(p)
         πk[k] = pdf(f_dirichlet, p)
     end
 
     πk = πk ./ sum(πk)  # normalize
+
+
     LnΠ = ones(n_nodes , n_records)
     for n ∈ axes(LnΠ,2)
         LnΠ[:,n] .= log.(πk)
     end
-
 
 
     R = ones(n_nodes , n_records)
@@ -205,6 +207,9 @@ function fit!(gsm::GSMBase, X; λ = 0.1, nepochs=100, tol=1e-3, nconverged=5, ve
         # if desired, force weights to be positive.
         if make_positive
             gsm.W = max.(gsm.W, 0.0)
+            for j ∈ axes(gsm.W, 2)
+                gsm.W[:,j] = gsm.W[:,j] ./ maximum(gsm.W[:,j])
+            end
         end
 
         mul!(gsm.Ψ, gsm.W, gsm.Φ')                         # update means
