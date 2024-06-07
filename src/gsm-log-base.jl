@@ -190,7 +190,8 @@ function fit!(gsm::GSMLogBase, X; λ = 0.1, nepochs=100, tol=1e-3, nconverged=5,
         # MAXIMIZATION
 
         # 1. Update the πk values
-        gsm.πk .= (1/N) .* sum(gsm.R, dims=2)
+        # gsm.πk .= (1/N) .* sum(gsm.R, dims=2)
+        gsm.πk .= max.((1/N) .* sum(gsm.R, dims=2), eps(eltype(gsm.πk)))
         for n ∈ axes(LnΠ,2)
             LnΠ[:,n] .= log.(gsm.πk)
         end

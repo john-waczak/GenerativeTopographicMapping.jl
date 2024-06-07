@@ -185,7 +185,8 @@ function fit!(gsm::GSMBase, X; λ = 0.1, nepochs=100, tol=1e-3, nconverged=5, ve
         # MAXIMIZATION
 
         # 1. Update the πk values
-        gsm.πk .= (1/N) .* sum(gsm.R, dims=2)
+        # gsm.πk .= (1/N) .* sum(gsm.R, dims=2)
+        gsm.πk .= max.((1/N) .* sum(gsm.R, dims=2), eps(eltype(gsm.πk)))
         for n ∈ axes(LnΠ,2)
             LnΠ[:,n] .= log.(gsm.πk)
         end
@@ -203,9 +204,9 @@ function fit!(gsm::GSMBase, X; λ = 0.1, nepochs=100, tol=1e-3, nconverged=5, ve
         # if desired, force weights to be positive.
         if make_positive
             gsm.W = max.(gsm.W, 0.0)
-            for j ∈ axes(gsm.W, 2)
-                gsm.W[:,j] = gsm.W[:,j] ./ maximum(gsm.W[:,j])
-            end
+            # for j ∈ axes(gsm.W, 2)
+            #     gsm.W[:,j] = gsm.W[:,j] ./ maximum(gsm.W[:,j])
+            # end
         end
 
         # 3. update precision β
