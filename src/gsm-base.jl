@@ -7,12 +7,12 @@ mutable struct GSMBase{T1 <: AbstractArray, T2 <: AbstractArray, T3 <: AbstractA
     Δ²::T6                # Node-data distance matrix
     R::T7                 # Responsibilities
     β⁻¹::Float64           # precision
-    LnΠ::T8   # prior distribution on nodes
+    πk::T8
 end
 
 
 
-function GSMBase(k, m, s, Nᵥ, α, X; rand_init=false, rng=mk_rng(123), nonlinear=true, linear=false, bias=false)
+function GSMBase(k, m, s, Nᵥ, X; rand_init=false, rng=mk_rng(123), nonlinear=true, linear=false, bias=false)
     # 1. define grid parameters
     n_records, n_features = size(X)
     n_nodes = binomial(k + Nᵥ - 2, Nᵥ - 1)
@@ -92,29 +92,9 @@ function GSMBase(k, m, s, Nᵥ, α, X; rand_init=false, rng=mk_rng(123), nonline
 
 
     # 10. Set up prior distribution
-    πk = zeros(n_nodes)
-    f_dirichlet = Dirichlet(α)
-    e = 0.5 * (1/k)  # offset to deal with Inf value on boundary
 
-    for k ∈ axes(Ξ,1)
-        p = Ξ[k,:]
-        for l ∈ axes(Ξ, 2)
-            if isapprox(Ξ[k,l], 0.0, atol=1e-6)
-                p[l] = e
-            end
-        end
-        p = p ./ sum(p)
-        πk[k] = pdf(f_dirichlet, p)
-    end
-
-    πk = πk ./ sum(πk)  # normalize
-
-
-    LnΠ = ones(n_nodes , n_records)
-    for n ∈ axes(LnΠ,2)
-        LnΠ[:,n] .= log.(πk)
-    end
-
+    # Initialize to value of 1/K
+    πk = ones(n_nodes)/n_nodes
 
     R = ones(n_nodes , n_records)
     for n ∈ axes(R,2)
@@ -123,7 +103,7 @@ function GSMBase(k, m, s, Nᵥ, α, X; rand_init=false, rng=mk_rng(123), nonline
 
 
     # 11. return final GSM object
-    return GSMBase(Ξ, M, Φ, W, Ψ, zeros(n_nodes, n_records), R, β⁻¹, LnΠ)
+    return GSMBase(Ξ, M, Φ, W, Ψ, zeros(n_nodes, n_records), R, β⁻¹, πk)
 end
 
 
@@ -145,6 +125,14 @@ function fit!(gsm::GSMBase, X; λ = 0.1, nepochs=100, tol=1e-3, nconverged=5, ve
     LHS = zeros(M,M)
     RHS = zeros(M,D)
 
+
+    LnΠ = ones(size(gsm.R))
+    for n ∈ axes(LnΠ,2)
+        LnΠ[:,n] .= log.(gsm.πk)
+    end
+
+
+
     l = 0.0
     llh_prev = 0.0
     llhs = Float64[]
@@ -164,7 +152,7 @@ function fit!(gsm::GSMBase, X; λ = 0.1, nepochs=100, tol=1e-3, nconverged=5, ve
         mul!(gsm.Ψ, gsm.W, gsm.Φ')                             # update latent node means
         pairwise!(sqeuclidean, gsm.Δ², gsm.Ψ, X', dims=2)    # update distance matrix
         gsm.Δ² .*= -(1/(2*gsm.β⁻¹))
-        softmax!(gsm.R, gsm.Δ² .+ gsm.LnΠ, dims=1)
+        softmax!(gsm.R, gsm.Δ² .+ LnΠ, dims=1)
 
         mul!(GΦ, diagm(sum(gsm.R, dims=2)[:]), gsm.Φ)          # update the G matrix diagonal
         mul!(RX, gsm.R, X)                                 # update intermediate for R.H.S
@@ -173,11 +161,11 @@ function fit!(gsm::GSMBase, X; λ = 0.1, nepochs=100, tol=1e-3, nconverged=5, ve
         prefac = (N*D/2)*log(1/(2* gsm.β⁻¹* π))
 
         if i == 1
-            l = max(prefac + sum(logsumexp(gsm.Δ² .* gsm.LnΠ, dims=1)), nextfloat(typemin(1.0)))
+            l = max(prefac + sum(logsumexp(gsm.Δ² .* LnΠ, dims=1)), nextfloat(typemin(1.0)))
             push!(llhs, l)
         else
             llh_prev = l
-            l = max(prefac + sum(logsumexp(gsm.Δ² .* gsm.LnΠ, dims=1)), nextfloat(typemin(1.0)))
+            l = max(prefac + sum(logsumexp(gsm.Δ² .* LnΠ, dims=1)), nextfloat(typemin(1.0)))
             push!(llhs, l)
 
             # check for convergence
@@ -195,6 +183,14 @@ function fit!(gsm::GSMBase, X; λ = 0.1, nepochs=100, tol=1e-3, nconverged=5, ve
         end
 
         # MAXIMIZATION
+
+        # 1. Update the πk values
+        gsm.πk .= (1/N) .* sum(gsm.R, dims=2)
+        for n ∈ axes(LnΠ,2)
+            LnΠ[:,n] .= log.(gsm.πk)
+        end
+
+
         mul!(LHS, gsm.Φ', GΦ)                              # update left-hand-side
         if λ > 0
             LHS[diagind(LHS)] .+= λ * gsm.β⁻¹               # add regularization
@@ -231,20 +227,32 @@ end
 
 
 function DataMeans(gsm::GSMBase, X)
+    LnΠ = ones(size(gsm.R))
+    for n ∈ axes(LnΠ,2)
+        LnΠ[:,n] .= log.(gsm.πk)
+    end
+
+
     mul!(gsm.Ψ, gsm.W, gsm.Φ')
     Δ² = pairwise(sqeuclidean, gsm.Ψ, X', dims=2)
     Δ² .*= -(1/(2*gsm.β⁻¹))
-    R = softmax(Δ² .+ gsm.LnΠ, dims=1)
+    R = softmax(Δ² .+ LnΠ, dims=1)
 
     return R'*gsm.Ξ
 end
 
 
 function DataModes(gsm::GSMBase, X)
+    LnΠ = ones(size(gsm.R))
+    for n ∈ axes(LnΠ,2)
+        LnΠ[:,n] .= log.(gsm.πk)
+    end
+
+
     mul!(gsm.Ψ, gsm.W, gsm.Φ')
     Δ² = pairwise(sqeuclidean, gsm.Ψ, X', dims=2)
     Δ² .*= -(1/(2*gsm.β⁻¹))
-    R = softmax(Δ² .+ gsm.LnΠ, dims=1)
+    R = softmax(Δ² .+ LnΠ, dims=1)
 
     idx = argmax(R, dims=1)
     idx = [idx[i][1] for i ∈ 1:length(idx)]
@@ -253,10 +261,15 @@ end
 
 
 function class_labels(gsm::GSMBase, X)
+    LnΠ = ones(size(gsm.R))
+    for n ∈ axes(LnΠ,2)
+        LnΠ[:,n] .= log.(gsm.πk)
+    end
+
     mul!(gsm.Ψ, gsm.W, gsm.Φ')
     Δ² = pairwise(sqeuclidean, gsm.Ψ, X', dims=2)
     Δ² .*= -(1/(2*gsm.β⁻¹))
-    R = softmax(Δ² .+ gsm.LnΠ, dims=1)
+    R = softmax(Δ² .+ LnΠ, dims=1)
 
     idx = argmax(R, dims=1)
     idx = [idx[i][1] for i ∈ 1:length(idx)]
@@ -265,10 +278,15 @@ end
 
 
 function responsibility(gsm::GSMBase, X)
+    LnΠ = ones(size(gsm.R))
+    for n ∈ axes(LnΠ,2)
+        LnΠ[:,n] .= log.(gsm.πk)
+    end
+
     mul!(gsm.Ψ, gsm.W, gsm.Φ')
     Δ² = pairwise(sqeuclidean, gsm.Ψ, X', dims=2)
     Δ² .*= -(1/(2*gsm.β⁻¹))
-    R = softmax(Δ² .+ gsm.LnΠ, dims=1)
+    R = softmax(Δ² .+ LnΠ, dims=1)
 
     return R'
 end

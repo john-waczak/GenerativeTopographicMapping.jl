@@ -191,7 +191,7 @@ end
     m = 5
     s = 0.1
     Nᵥ = 3
-    gsm = GenerativeTopographicMapping.GSMBase(k,m,s, Nᵥ, ones(Nᵥ), X)
+    gsm = GenerativeTopographicMapping.GSMBase(k,m,s, Nᵥ, X)
 
     Ξ = gsm.Ξ
     M = gsm.M
@@ -235,10 +235,11 @@ end
 
 
     # do same but for linear-only model
-    model = GSM(k=Nₑ, Nv=Nᵥ, nepochs=100, rng=rng, nonlinear=false, linear=true, bias=false)
+    model = GSM(k=Nₑ, Nv=Nᵥ, nepochs=100, rng=rng, nonlinear=false, linear=true, bias=false, make_positive=true)
     m = machine(model, X)
-    fit!(m, verbosity=0)
+    fit!(m, verbosity=1)
     rpt = report(m)
     @test size(rpt[:Φ], 2) == Nᵥ
+
 end
 

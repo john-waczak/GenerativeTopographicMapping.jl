@@ -10,7 +10,6 @@ mutable struct GSM<: MLJModelInterface.Unsupervised
     Nv::Int
     s::Float64
     λ::Float64
-    α::Vector{Float64}
     nonlinear::Bool
     linear::Bool
     bias::Bool
@@ -24,8 +23,8 @@ end
 
 
 
-function GSM(; k=10, m=5, Nv=3, s=1.0, λ=0.1, α=ones(3), nonlinear=true, linear=false, bias=false,itive=false, make_positive=false, nepochs=100, tol=1e-3, nconverged=4, rand_init=false, rng=123)
-    model = GSM(k, m, Nv, s, λ, α, nonlinear, linear, bias, make_positive, nepochs, tol, nconverged, rand_init, mk_rng(rng))
+function GSM(; k=10, m=5, Nv=3, s=1.0, λ=0.1, nonlinear=true, linear=false, bias=false,itive=false, make_positive=false, nepochs=100, tol=1e-3, nconverged=4, rand_init=false, rng=123)
+    model = GSM(k, m, Nv, s, λ, nonlinear, linear, bias, make_positive, nepochs, tol, nconverged, rand_init, mk_rng(rng))
     message = MLJModelInterface.clean!(model)
     isempty(message) || @warn message
     return model
@@ -58,11 +57,6 @@ function MLJModelInterface.clean!(m::GSM)
     if m.λ < 0
         warning *= "Parameter `λ` expected to be non-negative, resetting to 0.1\n"
         m.λ = 0.1
-    end
-
-    if any(m.α .≤ 0)
-        warning *= "Parameter vector `α` expected to be positive, resetting to [1,...,1]\n"
-        m.α = ones(m.Nv)
     end
 
     if m.nepochs ≤ 0
@@ -104,7 +98,7 @@ function MLJModelInterface.fit(m::GSM, verbosity, Datatable)
     end
 
     # 1. build the GTM
-    gsm = GSMBase(m.k, m.m, m.s, m.Nv, m.α, X; rand_init=m.rand_init, rng=m.rng, nonlinear=m.nonlinear, linear=m.linear, bias=m.bias)
+    gsm = GSMBase(m.k, m.m, m.s, m.Nv, X; rand_init=m.rand_init, rng=m.rng, nonlinear=m.nonlinear, linear=m.linear, bias=m.bias)
 
     # 2. Fit the GTM
     converged, llhs, AIC, BIC = fit!(
