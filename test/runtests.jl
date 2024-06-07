@@ -237,7 +237,7 @@ end
     # do same but for linear-only model
     model = GSM(k=Nₑ, Nv=Nᵥ, nepochs=100, rng=rng, nonlinear=false, linear=true, bias=false, make_positive=true)
     m = machine(model, X)
-    fit!(m, verbosity=1)
+    fit!(m, verbosity=0)
     rpt = report(m)
     @test size(rpt[:Φ], 2) == Nᵥ
 
