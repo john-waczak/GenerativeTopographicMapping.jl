@@ -10,7 +10,9 @@ mutable struct GSMLog <: MLJModelInterface.Unsupervised
     Nv::Int
     s::Float64
     λ::Float64
-    α::Vector{Float64}
+    nonlinear::Bool
+    linear::Bool
+    bias::Bool
     nepochs::Int
     tol::Float64
     nconverged::Int
@@ -20,8 +22,8 @@ end
 
 
 
-function GSMLog(; k=10, m=5, Nv=3, s=1.0, λ=0.1, α=ones(3), nepochs=100, tol=1e-3, nconverged=4, rand_init=false, rng=123)
-    model = GSMLog(k, m, Nv, s, λ, α, nepochs, tol, nconverged, rand_init, mk_rng(rng))
+function GSMLog(; k=10, m=5, Nv=3, s=1.0, λ=0.1, nonlinear=true, linear=false, bias=false,itive=false, nepochs=100, tol=1e-3, nconverged=4, rand_init=false, rng=123)
+    model = GSMLog(k, m, Nv, s, λ, nonlinear, linear, bias, nepochs, tol, nconverged, rand_init, mk_rng(rng))
     message = MLJModelInterface.clean!(model)
     isempty(message) || @warn message
     return model
@@ -56,11 +58,6 @@ function MLJModelInterface.clean!(m::GSMLog)
         m.λ = 0.1
     end
 
-    if any(m.α .≤ 0)
-        warning *= "Parameter vector `α` expected to be positive, resetting to [1,...,1]\n"
-        m.α = ones(m.Nv)
-    end
-
     if m.nepochs ≤ 0
         warning *= "Parameter `nepochs` expected to be positive, resetting to 100\n"
         m.nepochs = 100
@@ -74,6 +71,13 @@ function MLJModelInterface.clean!(m::GSMLog)
     if m.nconverged < 0
         warning *= "Parameter `nconverged` expected to be non-negative, resetting to 4\n"
         m.nconverged = 4
+    end
+
+    if !any([m.nonlinear, m.linear, m.bias])
+        warning *= "One of `nonlinear`, `linear`, and `bias` must be `true`. Resetting `nonlinear` to true"
+        m.nonlinear = true
+        m.linear = false
+        m.bias = false
     end
 
     return warning
@@ -94,7 +98,7 @@ function MLJModelInterface.fit(m::GSMLog, verbosity, Datatable)
     end
 
     # 1. build the GTM
-    gsm = GSMLogBase(m.k, m.m, m.s, m.Nv, m.α, X; rand_init=m.rand_init)
+    gsm = GSMLogBase(m.k, m.m, m.s, m.Nv, X; rand_init=m.rand_init)
 
     # 2. Fit the GTM
     converged, llhs, AIC, BIC = fit!(

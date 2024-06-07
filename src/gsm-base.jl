@@ -190,7 +190,7 @@ function fit!(gsm::GSMBase, X; λ = 0.1, nepochs=100, tol=1e-3, nconverged=5, ve
             LnΠ[:,n] .= log.(gsm.πk)
         end
 
-
+        # 2. update weight matrix
         mul!(LHS, gsm.Φ', GΦ)                              # update left-hand-side
         if λ > 0
             LHS[diagind(LHS)] .+= λ * gsm.β⁻¹               # add regularization
@@ -208,6 +208,7 @@ function fit!(gsm::GSMBase, X; λ = 0.1, nepochs=100, tol=1e-3, nconverged=5, ve
             end
         end
 
+        # 3. update precision β
         mul!(gsm.Ψ, gsm.W, gsm.Φ')                         # update means
         pairwise!(sqeuclidean, gsm.Δ², gsm.Ψ, X', dims=2)  # update distance matrix
         gsm.β⁻¹ = sum(gsm.R .* gsm.Δ²)/(N*D)                    # update variance

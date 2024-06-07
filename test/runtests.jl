@@ -134,7 +134,7 @@ end
     m = 5
     s = 0.1
     Nᵥ = 3
-    gsm = GenerativeTopographicMapping.GSMLogBase(k,m,s, Nᵥ, ones(Nᵥ), X)
+    gsm = GenerativeTopographicMapping.GSMLogBase(k,m,s, Nᵥ, X)
 
     Ξ = gsm.Ξ
     M = gsm.M
