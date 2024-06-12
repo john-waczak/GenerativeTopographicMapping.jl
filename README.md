@@ -43,3 +43,14 @@ If the full responsibility distribution is desired, you can `predict_responsabil
 R = predict_responsibility(mach, X)
 ```
 
+
+# GSM
+
+The GSM (Generative Simplex Mapping) is a riff on the GTM structure designed for unmixing problems. The latent space is chosen to be the $n$-simplex corresponding to $n$ unique sources. Additionally, model weights can optionally be constrained to positive values for source apportionment or spectral unmixing applications. The following MLJ-style syntax can be used to initialize and fit a GSM.
+
+```julia
+gsm = GSM()
+mach = machine(gsm, df)
+fit!(mach)
+```
+
