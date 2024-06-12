@@ -1,14 +1,7 @@
-# include("gsm-base.jl")
-
-# using MLJModelInterface
-# import MLJBase
-
-
 mutable struct GSM<: MLJModelInterface.Unsupervised
     k::Int
     m::Int
     Nv::Int
-    s::Float64
     λ::Float64
     nonlinear::Bool
     linear::Bool
@@ -23,8 +16,8 @@ end
 
 
 
-function GSM(; k=10, m=5, Nv=3, s=1.0, λ=0.1, nonlinear=true, linear=false, bias=false,itive=false, make_positive=false, nepochs=100, tol=1e-3, nconverged=4, rand_init=false, rng=123)
-    model = GSM(k, m, Nv, s, λ, nonlinear, linear, bias, make_positive, nepochs, tol, nconverged, rand_init, mk_rng(rng))
+function GSM(; k=10, m=5, Nv=3, λ=0.1, nonlinear=true, linear=false, bias=false, make_positive=false, nepochs=100, tol=1e-3, nconverged=4, rand_init=false, rng=123)
+    model = GSM(k, m, Nv, λ, nonlinear, linear, bias, make_positive, nepochs, tol, nconverged, rand_init, mk_rng(rng))
     message = MLJModelInterface.clean!(model)
     isempty(message) || @warn message
     return model
@@ -47,11 +40,6 @@ function MLJModelInterface.clean!(m::GSM)
     if m.Nv ≤ 0
         warning *= "Parameter `Nv` expected to be positive, resetting to 3\n"
         m.Nv = 3
-    end
-
-    if m.s ≤ 0
-        warning *= "Parameter `s` expected to be positive, resetting to 1.0\n"
-        m.s = 1.0
     end
 
     if m.λ < 0
@@ -98,10 +86,10 @@ function MLJModelInterface.fit(m::GSM, verbosity, Datatable)
     end
 
     # 1. build the GTM
-    gsm = GSMBase(m.k, m.m, m.s, m.Nv, X; rand_init=m.rand_init, rng=m.rng, nonlinear=m.nonlinear, linear=m.linear, bias=m.bias)
+    gsm = GSMBase(m.k, m.m, m.Nv, X; rand_init=m.rand_init, rng=m.rng, nonlinear=m.nonlinear, linear=m.linear, bias=m.bias)
 
     # 2. Fit the GTM
-    converged, llhs, AIC, BIC = fit!(
+    converged, Qs, llhs, AIC, BIC = fit!(
         gsm,
         X,
         λ = m.λ,
@@ -116,14 +104,15 @@ function MLJModelInterface.fit(m::GSM, verbosity, Datatable)
     cache = nothing
 
     # get indices of vertices
-    idx_vertices = vcat([findall(isapprox.(gsm.Ξ[:,j], 1, atol=1e-8)) for j ∈ axes(gsm.Ξ,2)]...)
+    idx_vertices = vcat([findall(isapprox.(gsm.Z[:,j], 1, atol=1e-8)) for j ∈ axes(gsm.Z,2)]...)
 
     report = (;
               :W => gsm.W,
               :β⁻¹ => gsm.β⁻¹,
               :Φ => gsm.Φ,
               :node_data_means => gsm.W*gsm.Φ',
-              :Ξ => gsm.Ξ,
+              :Z => gsm.Z,
+              :Q => Qs,
               :llhs => llhs,
               :converged => converged,
               :AIC => AIC,
@@ -151,12 +140,11 @@ end
 
 
 function MLJModelInterface.transform(m::GSM, fitresult, Data_new)
-    # return a table with the mean ξ₁ and ξ₂ for each record
     Xnew = MLJModelInterface.matrix(Data_new)
-    ξmeans = DataMeans(fitresult, Xnew)
-    names = [Symbol("ξ$(i)") for i ∈ 1:m.Nv]
+    zmeans = DataMeans(fitresult, Xnew)
+    names = [Symbol("Z$(i)") for i ∈ 1:m.Nv]
 
-    return MLJModelInterface.table(ξmeans; names=names)
+    return MLJModelInterface.table(zmeans; names=names)
 end
 
 

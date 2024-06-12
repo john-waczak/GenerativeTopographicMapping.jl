@@ -119,61 +119,6 @@ end
 
 
 
-@testset "gsm-log-base.jl" begin
-    Nₑ = 5  # nodes per edge
-    Nᵥ = 3  # number of vertices
-    D = Nᵥ - 1
-    Λ = gtm = GenerativeTopographicMapping.get_barycentric_grid_coords(Nₑ, Nᵥ)
-    @test size(Λ, 2) == binomial(Nₑ + D - 1, D)
-
-
-    # generate synthetic data
-    X = rand(rng, 100, 10)  # test data must be non-negative
-
-    k = 10
-    m = 5
-    s = 0.1
-    Nᵥ = 3
-    gsm = GenerativeTopographicMapping.GSMLogBase(k,m,s, Nᵥ, X)
-
-    Ξ = gsm.Ξ
-    M = gsm.M
-    @test size(Ξ,1) == binomial(k + Nᵥ - 2, Nᵥ -1)
-    @test size(M,1) == binomial(m + Nᵥ - 2, Nᵥ -1)
-end
-
-
-@testset "GSM Log MLJ Interface" begin
-    Nₑ = 5  # nodes per edge
-    Nᵥ = 3  # number of vertices
-    D = Nᵥ - 1
-
-
-    # generate synthetic dataset for testing with 100 data points, 10 features, and 5 classes
-    X = Tables.table(rand(rng, 100,10))
-
-    model = GSMLog(k=Nₑ, Nv=Nᵥ, rng=rng)
-    m = machine(model, X)
-    fit!(m, verbosity=0)
-
-    X̃ = MLJBase.transform(m, X)
-    @test size(matrix(X̃)) == (100, Nᵥ)
-
-    classes = MLJBase.predict(m, X)
-    @test length(classes) == 100
-
-    Resp = predict_responsibility(m, X)
-    @test all(isapprox.(sum(Resp, dims=2), 1.0))
-
-    fp = fitted_params(m)
-    @test Set([:gsm]) == Set(keys(fp))
-
-    rpt = report(m)
-
-    @test Set([:W, :β⁻¹, :Φ, :node_data_means, :Ξ, :llhs, :converged, :AIC, :BIC, :idx_vertices]) == Set(keys(rpt))
-
-end
-
 
 
 @testset "gsm-base.jl" begin
@@ -189,14 +134,11 @@ end
 
     k = 10
     m = 5
-    s = 0.1
     Nᵥ = 3
-    gsm = GenerativeTopographicMapping.GSMBase(k,m,s, Nᵥ, X)
+    gsm = GenerativeTopographicMapping.GSMBase(k, m, Nᵥ, X)
 
-    Ξ = gsm.Ξ
-    M = gsm.M
-    @test size(Ξ,1) == binomial(k + Nᵥ - 2, Nᵥ -1)
-    @test size(M,1) == binomial(m + Nᵥ - 2, Nᵥ -1)
+    Z = gsm.Z
+    @test size(Z,1) == binomial(k + Nᵥ - 2, Nᵥ -1)
 end
 
 
@@ -228,7 +170,7 @@ end
     @test Set([:gsm]) == Set(keys(fp))
 
     rpt = report(m)
-    @test Set([:W, :β⁻¹, :Φ, :node_data_means, :Ξ, :llhs, :converged, :AIC, :BIC, :idx_vertices]) == Set(keys(rpt))
+    @test Set([:W, :β⁻¹, :Φ, :node_data_means, :Z, :Q, :llhs, :converged, :AIC, :BIC, :idx_vertices]) == Set(keys(rpt))
 
     # this should be guarenteed by ELU and choice of basis function
     @test all(fp[:gsm].Ψ .≥ 0)
@@ -242,4 +184,5 @@ end
     @test size(rpt[:Φ], 2) == Nᵥ
 
 end
+
 

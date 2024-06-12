@@ -128,7 +128,7 @@ function fit!(gtm::GTMBase, X; λ = 0.1, nepochs=100, tol=1e-3, nconverged=5, ve
 
         softmax!(gtm.R, gtm.Δ², dims=1)
 
-        mul!(GΦ, diagm(sum(gtm.R, dims=2)[:]), gtm.Φ)      # update the G matrix diagonal
+        mul!(GΦ, Diagonal(sum(gtm.R, dims=2)[:]), gtm.Φ)      # update the G matrix diagonal
         mul!(RX, gtm.R, X)                                 # update intermediate for R.H.S
 
         # UPDATE LOG-LIKELIHOOD

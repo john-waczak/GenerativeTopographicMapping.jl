@@ -15,3 +15,8 @@ function get_barycentric_grid_coords(Nₑ, Nᵥ)
     return Λ
 end
 
+# Define the basis elements
+linear_elem(r, m) = (r ≤ 1/m) ? -m*(r-(1/m)) : 0.0
+quadratic_elem(r, m) = (r ≤ 1/m) ? -m^2*(r-(1/m))*(r+(1/m)) : 0.0
+
+
