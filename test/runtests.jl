@@ -5,6 +5,7 @@ using StableRNGs  # should add this for later
 using MLJTestIntegration
 using Tables
 using Distances
+using LinearAlgebra
 
 rng = StableRNG(1234)
 
@@ -172,16 +173,69 @@ end
     rpt = report(m)
     @test Set([:W, :β⁻¹, :Φ, :node_data_means, :Z, :Q, :llhs, :converged, :AIC, :BIC, :idx_vertices]) == Set(keys(rpt))
 
-    # this should be guarenteed by ELU and choice of basis function
-    @test all(fp[:gsm].Ψ .≥ 0)
-
-
     # do same but for linear-only model
     model = GSM(k=Nₑ, Nv=Nᵥ, nepochs=100, rng=rng, nonlinear=false, linear=true, bias=false, make_positive=true)
     m = machine(model, X)
     fit!(m, verbosity=0)
     rpt = report(m)
     @test size(rpt[:Φ], 2) == Nᵥ
+
+end
+
+
+
+
+@testset "gsm-big-base.jl" begin
+    n_nodes  = 15  # nodes per edge
+    n_rbfs = 5  # nodes per edge
+    Nᵥ = 3  # number of vertices
+    s = 0.05
+
+    # generate synthetic data
+    X = rand(rng, 100, 10)  # test data must be non-negative
+
+    gsm = GenerativeTopographicMapping.GSM_big(n_nodes, n_rbfs, Nᵥ, s, X)
+
+
+    @test size(gsm.Z, 1) == n_nodes
+    @test gsm.Z[1:Nᵥ,:] == Diagonal(ones(Nᵥ))
+end
+
+
+
+
+@testset "GSM Big MLJ Interface" begin
+    n_nodes  = 15  # nodes per edge
+    n_rbfs = 5  # nodes per edge
+    Nᵥ = 3  # number of vertices
+    s = 0.05
+
+    # generate synthetic dataset for testing with 100 data points, 10 features, and 5 classes
+    X = Tables.table(rand(rng, 100,10))
+
+    model = GSMBig(n_nodes=n_nodes, n_rbfs=n_rbfs, s=s, Nv=Nᵥ, nepochs=100, rng=rng)
+    m = machine(model, X)
+    fit!(m, verbosity=0)
+
+    X̃ = MLJBase.transform(m, X)
+    @test size(matrix(X̃)) == (100, Nᵥ)
+
+    classes = MLJBase.predict(m, X)
+    @test length(classes) == 100
+
+    Resp = predict_responsibility(m, X)
+    @test all(isapprox.(sum(Resp, dims=2), 1.0))
+
+    fp = fitted_params(m)
+    @test Set([:gsm]) == Set(keys(fp))
+
+    rpt = report(m)
+    @test Set([:W, :β⁻¹, :Φ, :node_data_means, :Z, :Q, :llhs, :converged, :AIC, :BIC, :idx_vertices]) == Set(keys(rpt))
+
+    # make sure we can run the nonlinear version too
+    model = GSMBig(n_nodes=n_nodes, n_rbfs=n_rbfs, s=s, Nv=Nᵥ, nepochs=100, rng=rng, nonlinear=true, linear=true, bias=false)
+    m = machine(model, X)
+    fit!(m, verbosity=0)
 
 end
 

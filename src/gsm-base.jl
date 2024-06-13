@@ -126,11 +126,11 @@ function fit!(gsm::GSMBase, X; λ = 0.1, nepochs=100, tol=1e-3, nconverged=5, ve
     M = size(gsm.Φ,2)
 
     prefac = 0.0
-    RX = zeros(K,D)
-    GΦ = zeros(K,M)
-    LHS = zeros(M,M)
-    RHS = zeros(M,D)
-
+    # RX = zeros(K,D)
+    # GΦ = zeros(K,M)
+    # LHS = zeros(M,M)
+    # RHS = zeros(M,D)
+    G = Diagonal(sum(gsm.R, dims=2)[:])
 
     LnΠ = ones(size(gsm.R))
     for n ∈ axes(LnΠ,2)
@@ -156,14 +156,39 @@ function fit!(gsm::GSMBase, X; λ = 0.1, nepochs=100, tol=1e-3, nconverged=5, ve
 
 
 
-        # EXPECTATION
+        # EXPECTATIO
         mul!(gsm.Ψ, gsm.W, gsm.Φ')                             # update latent node means
         pairwise!(sqeuclidean, gsm.Δ², gsm.Ψ, X', dims=2)    # update distance matrix
         gsm.Δ² .*= -(1/(2*gsm.β⁻¹))
         softmax!(gsm.R, gsm.Δ² .+ LnΠ, dims=1)
 
-        mul!(GΦ, Diagonal(sum(gsm.R, dims=2)[:]), gsm.Φ)          # update the G matrix diagonal
-        mul!(RX, gsm.R, X)                                 # update intermediate for R.H.S
+        G .= Diagonal(sum(gsm.R, dims=2)[:])
+
+        # mul!(GΦ, Diagonal(sum(gsm.R, dims=2)[:]), gsm.Φ)          # update the G matrix diagonal
+        # mul!(RX, gsm.R, X)                                 # update intermediate for R.H.S
+
+        # MAXIMIZATION
+
+        # 1. Update the πk values
+        # gsm.πk .= (1/N) .* sum(gsm.R, dims=2)
+        gsm.πk .= max.((1/N) .* sum(gsm.R, dims=2), eps(eltype(gsm.πk)))
+        for n ∈ axes(LnΠ,2)
+            LnΠ[:,n] .= log.(gsm.πk)
+        end
+
+        # 2. update weight matrix
+        gsm.W = ((gsm.Φ'*G*gsm.Φ + λ*gsm.β⁻¹*I)\(gsm.Φ'*gsm.R*X))'
+
+        # if desired, force weights to be positive.
+        if make_positive
+            gsm.W = max.(gsm.W, 0.0)
+        end
+
+        # 3. update precision β
+        mul!(gsm.Ψ, gsm.W, gsm.Φ')                         # update means
+        pairwise!(sqeuclidean, gsm.Δ², gsm.Ψ, X', dims=2)  # update distance matrix
+        gsm.β⁻¹ = sum(gsm.R .* gsm.Δ²)/(N*D)                    # update variance
+
 
         # UPDATE LOG-LIKELIHOOD
         prefac = (N*D/2)*log(1/(2* gsm.β⁻¹* π))
@@ -198,34 +223,6 @@ function fit!(gsm::GSMBase, X; λ = 0.1, nepochs=100, tol=1e-3, nconverged=5, ve
             end
         end
 
-        # MAXIMIZATION
-
-        # 1. Update the πk values
-        # gsm.πk .= (1/N) .* sum(gsm.R, dims=2)
-        gsm.πk .= max.((1/N) .* sum(gsm.R, dims=2), eps(eltype(gsm.πk)))
-        for n ∈ axes(LnΠ,2)
-            LnΠ[:,n] .= log.(gsm.πk)
-        end
-
-        # 2. update weight matrix
-        mul!(LHS, gsm.Φ', GΦ)                              # update left-hand-side
-        if λ > 0
-            LHS[diagind(LHS)] .+= λ * gsm.β⁻¹               # add regularization
-        end
-        mul!(RHS, gsm.Φ', RX)                              # update right-hand-side
-
-        gsm.W = (LHS\RHS)'                                 # update weights
-
-        # enforce positivity of weights
-        # if desired, force weights to be positive.
-        if make_positive
-            gsm.W = max.(gsm.W, 0.0)
-        end
-
-        # 3. update precision β
-        mul!(gsm.Ψ, gsm.W, gsm.Φ')                         # update means
-        pairwise!(sqeuclidean, gsm.Δ², gsm.Ψ, X', dims=2)  # update distance matrix
-        gsm.β⁻¹ = sum(gsm.R .* gsm.Δ²)/(N*D)                    # update variance
 
         if verbose
             println("iter: $(i), Q=$(Qs[end]), log-likelihood = $(llhs[end])")

@@ -20,3 +20,5 @@ linear_elem(r, m) = (r ≤ 1/m) ? -m*(r-(1/m)) : 0.0
 quadratic_elem(r, m) = (r ≤ 1/m) ? -m^2*(r-(1/m))*(r+(1/m)) : 0.0
 
 
+
+quadratic_elem_big(r, s) = (r ≤ s) ? -(r-s)*(r+s)/s^2 : 0.0
