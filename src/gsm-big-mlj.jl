@@ -93,7 +93,7 @@ function MLJModelInterface.fit(m::GSMBig, verbosity, Datatable)
     # 1. build the GTM
     gsm = GSM_big(m.n_nodes, m.n_rbfs, m.Nv, m.s, X; rand_init=m.rand_init, rng=m.rng, nonlinear=m.nonlinear, linear=m.linear, bias=m.bias)
 
-    # 2. Fit the GTM
+    # 2. Fit the GSM
     converged, Qs, llhs, AIC, BIC = fit!(
         gsm,
         X,

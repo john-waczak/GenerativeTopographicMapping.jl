@@ -240,3 +240,38 @@ end
 end
 
 
+
+
+@testset "GSM Fan MLJ Interface" begin
+    n_nodes  = 15  # nodes per edge
+    n_rbfs = 5  # nodes per edge
+    Nᵥ = 3  # number of vertices
+    s = 0.05
+
+    # generate synthetic dataset for testing with 100 data points, 10 features, and 5 classes
+    X = Tables.table(rand(rng, 100,10))
+
+    model = GSMFan(n_nodes=n_nodes, n_rbfs=n_rbfs, s=s, Nv=Nᵥ, nepochs=100, rng=rng, make_positive=true)
+    m = machine(model, X)
+    fit!(m, verbosity=0)
+
+    X̃ = MLJBase.transform(m, X)
+    @test size(matrix(X̃)) == (100, Nᵥ)
+
+    classes = MLJBase.predict(m, X)
+    @test length(classes) == 100
+
+    Resp = predict_responsibility(m, X)
+    @test all(isapprox.(sum(Resp, dims=2), 1.0))
+
+    fp = fitted_params(m)
+    @test Set([:gsm]) == Set(keys(fp))
+
+    rpt = report(m)
+    @test Set([:W, :β⁻¹, :Φ, :node_data_means, :Z, :Q, :llhs, :converged, :AIC, :BIC, :idx_vertices]) == Set(keys(rpt))
+
+end
+
+
+
+

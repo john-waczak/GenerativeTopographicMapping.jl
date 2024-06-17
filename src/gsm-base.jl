@@ -156,7 +156,7 @@ function fit!(gsm::GSMBase, X; λ = 0.1, nepochs=100, tol=1e-3, nconverged=5, ve
 
 
 
-        # EXPECTATIO
+        # EXPECTATION
         mul!(gsm.Ψ, gsm.W, gsm.Φ')                             # update latent node means
         pairwise!(sqeuclidean, gsm.Δ², gsm.Ψ, X', dims=2)    # update distance matrix
         gsm.Δ² .*= -(1/(2*gsm.β⁻¹))
