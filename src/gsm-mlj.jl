@@ -1,6 +1,7 @@
 mutable struct GSM<: MLJModelInterface.Unsupervised
     k::Int
     m::Int
+    s::Float64
     Nv::Int
     λ::Float64
     nonlinear::Bool
@@ -16,8 +17,8 @@ end
 
 
 
-function GSM(; k=10, m=5, Nv=3, λ=0.1, nonlinear=true, linear=false, bias=false, make_positive=false, nepochs=100, tol=1e-3, nconverged=4, rand_init=false, rng=123)
-    model = GSM(k, m, Nv, λ, nonlinear, linear, bias, make_positive, nepochs, tol, nconverged, rand_init, mk_rng(rng))
+function GSM(; k=10, m=5, s=1.0, Nv=3, λ=0.1, nonlinear=true, linear=false, bias=false, make_positive=false, nepochs=100, tol=1e-3, nconverged=4, rand_init=false, rng=123)
+    model = GSM(k, m, s, Nv, λ, nonlinear, linear, bias, make_positive, nepochs, tol, nconverged, rand_init, mk_rng(rng))
     message = MLJModelInterface.clean!(model)
     isempty(message) || @warn message
     return model
@@ -35,6 +36,11 @@ function MLJModelInterface.clean!(m::GSM)
     if m.m ≤ 0
         warning *= "Parameter `m` expected to be positive, resetting to 5\n"
         m.m = 5
+    end
+
+    if m.s ≤ 0
+        warning *= "Parameter `s` expected to be positive, resetting to 1\n"
+        m.s = 1
     end
 
     if m.Nv ≤ 0
@@ -86,7 +92,7 @@ function MLJModelInterface.fit(m::GSM, verbosity, Datatable)
     end
 
     # 1. build the GTM
-    gsm = GSMBase(m.k, m.m, m.Nv, X; rand_init=m.rand_init, rng=m.rng, nonlinear=m.nonlinear, linear=m.linear, bias=m.bias)
+    gsm = GSMBase(m.k, m.m, m.s, m.Nv, X; rand_init=m.rand_init, rng=m.rng, nonlinear=m.nonlinear, linear=m.linear, bias=m.bias)
 
     # 2. Fit the GSM
     converged, Qs, llhs, AIC, BIC = fit!(

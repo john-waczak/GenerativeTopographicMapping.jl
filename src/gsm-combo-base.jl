@@ -1,4 +1,4 @@
-function fit_fan!(gsm::GSMBase, Nv, X; λe = 0.01, λw = 0.1, nepochs=100, tol=1e-3, nconverged=5, verbose=false, make_positive=false)
+function fit_combo!(gsm::GSMBase, Nv, X; λe = 0.01, λw = 0.1, nepochs=100, tol=1e-3, nconverged=5, verbose=false, make_positive=false)
     # get the needed dimensions
     N,D = size(X)
 

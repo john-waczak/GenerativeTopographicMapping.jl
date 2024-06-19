@@ -21,19 +21,19 @@ mk_rng(int::Integer) = Random.MersenneTwister(int)
 include("gtm-base.jl")
 include("gsm-base.jl")
 include("gsm-big-base.jl")
-include("gsm-fan-base.jl")
+include("gsm-combo-base.jl")
 
 
 include("gtm-mlj.jl")
 include("gsm-mlj.jl")
 include("gsm-big-mlj.jl")
-include("gsm-fan-mlj.jl")
+include("gsm-combo-mlj.jl")
 
 
 export GTM
 export GSM
 export GSMBig
-export GSMFan
+export GSMCombo
 
 export DataMeans, DataModes
 export responsibility
@@ -48,7 +48,7 @@ export predict_responsibility
 
 
 MLJModelInterface.metadata_pkg.(
-    [GTM, GSM, GSMBig, GSMFan],
+    [GTM, GSM, GSMBig, GSMCombo],
     name = "GenerativeTopographicMapping",
     uuid = "110c1e60-17ba-4aeb-8cee-444277a6d160", # see your Project.toml
     url  = "https://github.com/john-waczak/GenerativeTopographicMapping.jl",
@@ -83,7 +83,7 @@ MLJModelInterface.metadata_model(
 )
 
 MLJModelInterface.metadata_model(
-    GSMFan,
+    GSMCombo,
     input_scitype = MLJModelInterface.Table(MLJModelInterface.Continuous),
     output_scitype  = MLJModelInterface.Table(MLJModelInterface.Continuous),
     supports_weights = false,
@@ -324,14 +324,14 @@ GSMBig
 
 
 
-const DOC_GSMFan= ""*
+const DOC_GSMCombo= ""*
     ""*
     ""
 
 
 
 """
-$(MLJModelInterface.doc_header(GSMFan))
+$(MLJModelInterface.doc_header(GSMCombo))
 
 Generative Simplex Mapping based based on [Generative Topographic Mapping](https://direct.mit.edu/neco/article/10/1/215-234/6127),
   Neural Computation; Bishop, C.; (1998):
@@ -367,7 +367,7 @@ Train the machine with `fit!(mach, rows=...)`.
 # Fitted parameters
 The fields of `fitted_params(mach)` are:
 
-- `gsm`: The `GenerativeSimplexMap` object fit by the `GSMFan` model. Contains node coordinates, RBF means, RBF variance, weights, etc.
+- `gsm`: The `GenerativeSimplexMap` object fit by the `GSMCombo` model. Contains node coordinates, RBF means, RBF variance, weights, etc.
 
 
 # Report
@@ -386,7 +386,7 @@ The fields of `report(mach)` are:
 # Examples
 ```
 using MLJ
-gsm = @load GSMFan pkg=GenerativeTopographicMapping
+gsm = @load GSMCombo pkg=GenerativeTopographicMapping
 model = gsm()
 X, y = make_blob(100, 10; centers=5) # synthetic data
 mach = machine(model, X) |> fit!
@@ -396,7 +396,7 @@ rpt = report(mach)
 classes = rpt.classes
 ```
 """
-GSMFan
+GSMCombo
 
 
 

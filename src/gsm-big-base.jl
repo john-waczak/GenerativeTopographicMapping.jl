@@ -13,26 +13,16 @@ function GSM_big(n_nodes, n_rbfs, Nᵥ, s, X; rand_init=false, rng=mk_rng(123), 
 
     # 3. create grid of M rbf centers (means)
     M = zeros(n_rbfs, Nᵥ)
-
-    for i ∈ axes(M,1)
-        is_valid = false
-        while !is_valid
-            rbf_center = rand(rng, f_d)
-            if all(colwise(euclidean, rbf_center, Diagonal(ones(Nᵥ))) .> s)
-                M[i, :] = rbf_center
-                is_valid=true
-            end
-        end
-    end
-
+    M[1:Nᵥ, :] .= Diagonal(ones(Nᵥ))
+    M[Nᵥ+1:end,:] .= rand(rng, f_d, n_rbfs - Nᵥ)'
 
     # 5. create rbf activation matrix Φ
     Φ = []
     if nonlinear
         # Ξ has size K×Nᵥ
-        Δ = zeros(size(Z,1), size(M,1))
-        pairwise!(euclidean, Δ, Z, M, dims=1)
-        push!(Φ, quadratic_elem_big.(Δ, s).^3)
+        Δ² = zeros(size(Z,1), size(M,1))
+        pairwise!(sqeuclidean, Δ², Z, M, dims=1)
+        push!(Φ, exp.(-Δ² ./ (2*s^2)))  # using gaussian RBF kernel
     end
 
     if linear

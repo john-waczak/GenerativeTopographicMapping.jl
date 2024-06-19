@@ -1,7 +1,7 @@
 name = "GenerativeTopographicMapping"
 uuid = "110c1e60-17ba-4aeb-8cee-444277a6d160"
 authors = ["John Waczak <john.louis.waczak@gmail.com>"]
-version = "0.6.0"
+version = "0.7.0"
 
 [deps]
 Combinatorics = "861a8166-3701-5b0c-9a16-15d98fcdc6aa"

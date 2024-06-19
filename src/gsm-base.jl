@@ -12,7 +12,7 @@ end
 
 
 
-function GSMBase(k, m, Nᵥ, X; rand_init=false, rng=mk_rng(123), nonlinear=true, linear=false, bias=false)
+function GSMBase(k, m, s, Nᵥ, X; rand_init=false, rng=mk_rng(123), nonlinear=true, linear=false, bias=false)
     # 1. define grid parameters
     n_records, n_features = size(X)
     n_nodes = binomial(k + Nᵥ - 2, Nᵥ - 1)
@@ -23,24 +23,15 @@ function GSMBase(k, m, Nᵥ, X; rand_init=false, rng=mk_rng(123), nonlinear=true
 
     # 3. create grid of M rbf centers (means)
     M = get_barycentric_grid_coords(m, Nᵥ)'
-    # find the vertices so we can drop them in order to
-    # so that activation is 0 at vertices
-    idx_not_vertices = vcat([findall(.!(isapprox.(M[:,j], 1, atol=1e-8))) for j ∈ axes(M,2)]...)
-    M = M[idx_not_vertices,:]
-
+    σ = s * (1/k)
 
     # 5. create rbf activation matrix Φ
     Φ = []
     if nonlinear
         # Ξ has size K×Nᵥ
-        Δ = zeros(size(Z,1), size(M,1))
-        pairwise!(euclidean, Δ, Z, M, dims=1)
-
-        # use different kernel so we guarantee that we go to zero
-        # push!(Φ, exp.(-Δ² ./ (2*σ^2)))
-        # push!(Φ, linear_elem.(Δ, m))
-        # push!(Φ, quadratic_elem.(Δ, m))
-        push!(Φ, quadratic_elem.(Δ, m).^3)
+        Δ² = zeros(size(Z,1), size(M,1))
+        pairwise!(sqeuclidean, Δ², Z, M, dims=1)
+        push!(Φ, exp.(-Δ² ./ (2*σ^2)))  # using gaussian RBF kernel
     end
 
     if linear

@@ -1,4 +1,4 @@
-mutable struct GSMFan<: MLJModelInterface.Unsupervised
+mutable struct GSMCombo<: MLJModelInterface.Unsupervised
     n_nodes::Int
     n_rbfs::Int
     Nv::Int
@@ -13,15 +13,15 @@ mutable struct GSMFan<: MLJModelInterface.Unsupervised
     rng::Any
 end
 
-function GSMFan(; n_nodes=1000, n_rbfs=500, Nv=3, s=0.05, λe=0.01, λw=0.1, make_positive=false, nepochs=100, tol=1e-3, nconverged=4, rand_init=false, rng=123)
-    model = GSMFan(n_nodes, n_rbfs, Nv, s, λe, λw, make_positive, nepochs, tol, nconverged, rand_init, mk_rng(rng))
+function GSMCombo(; n_nodes=1000, n_rbfs=500, Nv=3, s=0.05, λe=0.01, λw=0.1, make_positive=false, nepochs=100, tol=1e-3, nconverged=4, rand_init=false, rng=123)
+    model = GSMCombo(n_nodes, n_rbfs, Nv, s, λe, λw, make_positive, nepochs, tol, nconverged, rand_init, mk_rng(rng))
     message = MLJModelInterface.clean!(model)
     isempty(message) || @warn message
     return model
 end
 
 
-function MLJModelInterface.clean!(m::GSMFan)
+function MLJModelInterface.clean!(m::GSMCombo)
     warning =""
 
     if m.n_nodes ≤ 0
@@ -75,7 +75,7 @@ end
 
 
 
-function MLJModelInterface.fit(m::GSMFan, verbosity, Datatable)
+function MLJModelInterface.fit(m::GSMCombo, verbosity, Datatable)
     # assume that X is a table
     X = MLJModelInterface.matrix(Datatable)
 
@@ -89,7 +89,7 @@ function MLJModelInterface.fit(m::GSMFan, verbosity, Datatable)
     gsm = GSM_big(m.n_nodes, m.n_rbfs, m.Nv, m.s, X; rand_init=m.rand_init, rng=m.rng, nonlinear=true, linear=true, bias=false)
 
     # 2. Fit the GSM
-    converged, Qs, llhs, AIC, BIC = fit_fan!(
+    converged, Qs, llhs, AIC, BIC = fit_combo!(
         gsm,
         m.Nv,
         X,
@@ -127,10 +127,10 @@ end
 
 
 
-MLJModelInterface.fitted_params(m::GSMFan, fitresult) = (gsm=fitresult,)
+MLJModelInterface.fitted_params(m::GSMCombo, fitresult) = (gsm=fitresult,)
 
 
-function MLJModelInterface.predict(m::GSMFan, fitresult, Data_new)
+function MLJModelInterface.predict(m::GSMCombo, fitresult, Data_new)
     # Return the mode index as a class label
     Xnew = MLJModelInterface.matrix(Data_new)
     labels = MLJModelInterface.categorical(1:m.n_nodes)
@@ -140,7 +140,7 @@ end
 
 
 
-function MLJModelInterface.transform(m::GSMFan, fitresult, Data_new)
+function MLJModelInterface.transform(m::GSMCombo, fitresult, Data_new)
     Xnew = MLJModelInterface.matrix(Data_new)
     zmeans = DataMeans(fitresult, Xnew)
     names = [Symbol("z_$(i)") for i ∈ 1:m.Nv]
@@ -151,7 +151,7 @@ end
 
 
 
-function predict_responsibility(m::MLJBase.Machine{GSMFan, GSMFan, true}, Data_new)
+function predict_responsibility(m::MLJBase.Machine{GSMCombo, GSMCombo, true}, Data_new)
     Xnew = MLJModelInterface.matrix(Data_new)
     gsm = fitted_params(m)[:gsm]
     return responsibility(gsm, Xnew)
