@@ -13,18 +13,8 @@ function GSMBigNonlinearBase(n_nodes, n_rbfs, Nᵥ, s, X; rng=mk_rng(123))
 
     # 3. create grid of M rbf centers (means)
     M = zeros(n_rbfs, Nᵥ)
-
-    # reject any that are too close to the vertices
-    for i ∈ axes(M,1)
-        is_valid = false
-        while !is_valid
-            rbf_center = rand(rng, f_d)
-            if all(colwise(euclidean, rbf_center, Diagonal(ones(Nᵥ))) .> s)
-                M[i, :] = rbf_center
-                is_valid=true
-            end
-        end
-    end
+    M[1:Nᵥ, :] .= Diagonal(ones(Nᵥ))
+    M[Nᵥ+1:end,:] .= rand(rng, f_d, n_rbfs - Nᵥ)'
 
     # 4. create rbf activation matrix Φ
     Δ² = zeros(size(Z,1), size(M,1))
