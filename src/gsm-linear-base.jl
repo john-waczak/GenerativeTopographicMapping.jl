@@ -1,4 +1,4 @@
-mutable struct GSMComboBase{T1 <: AbstractArray, T2 <: AbstractArray, T3 <: AbstractArray, T4 <: AbstractArray, T5 <: AbstractArray, T6 <: AbstractArray, T7 <: AbstractArray}
+mutable struct GSMLinearBase{T1 <: AbstractArray, T2 <: AbstractArray, T3 <: AbstractArray, T4 <: AbstractArray, T5 <: AbstractArray, T6 <: AbstractArray, T7 <: AbstractArray}
     Z::T1                 # Latent coordinates
     Φ::T2                 # RBF activations
     W::T3                 # RBF weights
@@ -11,83 +11,65 @@ end
 
 
 
-function bump(r, m)  = (r ≤ 1/m) ? -m^2*(r-(1/m))*(r+(1/m)) : 0.0
 
-
-function GSMComboBase(k, m, s, Nᵥ, X; rng=mk_rng(123))
+function GSMLinearBase(k, Nᵥ, X; rng=mk_rng(123))
     # 1. define grid parameters
     n_records, n_features = size(X)
     n_nodes = binomial(k + Nᵥ - 2, Nᵥ - 1)
 
-    n_rbf_centers = binomial(m + Nᵥ - 2, Nᵥ - 1)
-
     # 2. create grid of K latent nodes
     Z = get_barycentric_grid_coords(k, Nᵥ)'
 
-    # 3. create grid of M rbf centers (means)
-    M = get_barycentric_grid_coords(m, Nᵥ)'
+    Φ = Z
 
-    # remove the vertices
-    idx_vertices = vcat([findall(.!(isapprox.(M[:,j], 1, atol=1e-8))) for j ∈ axes(M,2)]...)
-    M = M[idx_vertices, :]
-
-    σ = s * (1/k)
-
-    # 4. create rbf activation matrix Φ
-    Δ² = zeros(size(Z,1), size(M,1))
-    pairwise!(sqeuclidean, Δ², Z, M, dims=1)
-
-    Φ  = quadratic_elem.(Δ, n_rbf_centers)
-    = (r ≤ 1/m) ? -m^2*(r-(1/m))*(r+(1/m)) : 0.0
-    Φ =  exp.(-Δ² ./ (2*σ^2))  # using gaussian RBF kernel
-
-    # 5. perform PCA on data to get principle component variances
+    # 3. perform PCA on data to get principle component variances
     data_means = vec(mean(Array(X), dims=1))
     D = Array(X)' .- data_means
     Svd = svd(D)
     pca_vars = (abs2.(Svd.S) ./ (n_records-1))[1:Nᵥ+1]
 
-    # 6. Initialize weights
+
+    # 4. Initialize weights
     W = rand(rng, n_features, size(Φ, 2))
 
-    # 7. Initialize data manifold Ψ using W and Φ
+    # 5. Initialize data manifold Ψ using W and Φ
     Ψ = W * Φ'
 
-    # 8. Set the variance parameter
+    # 6. Set the variance parameter
     β⁻¹ = max(pca_vars[Nᵥ+1], mean(pairwise(sqeuclidean, Ψ, dims=2))/2)
 
-    # 9. Set up prior distribution for mixing coefficients
+    # 7. Set up prior distribution for mixing coefficients
     πk = ones(n_nodes)/n_nodes  # initialize to 1/K
 
-    # 10. Initialize responsibility matrix
+    # 8. Initialize responsibility matrix
     R = ones(n_nodes , n_records)
     for n ∈ axes(R,2)
         R[:,n] .= πk
     end
 
-    # 11. return final GSM object
-    return GSMComboBase(Z, Φ, W, Ψ, zeros(n_nodes, n_records), R, β⁻¹, πk)
+    # 9. return final GSM object
+    return GSMLinearBase(Z, Φ, W, Ψ, zeros(n_nodes, n_records), R, β⁻¹, πk)
 end
 
 
 
-function fit!(gsm::GSMComboBase, Nv, X; λe = 0.01, λw = 0.1, nepochs=100, tol=1e-3, nconverged=5, verbose=false, make_positive=false)
+
+
+function fit!(gsm::GSMLinearBase, X; λ = 0.1, nepochs=100, tol=1e-3, nconverged=5, verbose=false, make_positive=false)
     # get the needed dimensions
     N,D = size(X)
-
     K = size(gsm.Z,1)
-
     M = size(gsm.Φ,2)
 
     prefac = 0.0
     G = Diagonal(sum(gsm.R, dims=2)[:])
 
+    # compute log of mixing coefficients
     LnΠ = ones(size(gsm.R))
     for n ∈ axes(LnΠ,2)
         LnΠ[:,n] .= log.(gsm.πk)
     end
 
-    Λ = Diagonal(vcat(λe * ones(Nv), λw * ones(M-Nv)))
 
     Q = 0.0
     Q_prev = 0.0
@@ -98,13 +80,6 @@ function fit!(gsm::GSMComboBase, Nv, X; λe = 0.01, λw = 0.1, nepochs=100, tol=
     converged = false
 
     for i in 1:nepochs
-
-        # if desired, force weights to be positive.
-        if make_positive
-            gsm.W = max.(gsm.W, 0.0)
-        end
-
-
 
         # EXPECTATION
         mul!(gsm.Ψ, gsm.W, gsm.Φ')                             # update latent node means
@@ -117,16 +92,13 @@ function fit!(gsm::GSMComboBase, Nv, X; λe = 0.01, λw = 0.1, nepochs=100, tol=
         # MAXIMIZATION
 
         # 1. Update the πk values
-        # gsm.πk .= (1/N) .* sum(gsm.R, dims=2)
         gsm.πk .= max.((1/N) .* sum(gsm.R, dims=2), eps(eltype(gsm.πk)))
         for n ∈ axes(LnΠ,2)
             LnΠ[:,n] .= log.(gsm.πk)
         end
 
         # 2. update weight matrix
-
-        # Assume a GSM with Linear and Nonlinear terms + No Bias
-        gsm.W = ((gsm.Φ'*G*gsm.Φ + gsm.β⁻¹*Λ)\(gsm.Φ'*gsm.R*X))'
+        gsm.W = ((gsm.Φ'*G*gsm.Φ + λ*gsm.β⁻¹*I)\(gsm.Φ'*gsm.R*X))'
 
         # if desired, force weights to be positive.
         if make_positive
@@ -139,13 +111,13 @@ function fit!(gsm::GSMComboBase, Nv, X; λe = 0.01, λw = 0.1, nepochs=100, tol=
         gsm.β⁻¹ = sum(gsm.R .* gsm.Δ²)/(N*D)                    # update variance
 
 
-        # UPDATE LOG-LIKELIHOOD
+        # UPDATE Q and LOG-LIKELIHOOD
         prefac = (N*D/2)*log(1/(2* gsm.β⁻¹* π))
 
         if i == 1
             l = max(prefac + sum(logsumexp(gsm.Δ² .* LnΠ, dims=1)), nextfloat(typemin(1.0)))
 
-            Q = (N*D/2)*log(1/(2* gsm.β⁻¹* π)) + sum(gsm.R .* LnΠ) - sum(gsm.R .* gsm.Δ²)  + (length(D*(M-Nv))/2)*log(λw/(2π)) + (length(D*Nv)/2)*log(λe/(2π))  - (λe/2)*sum(gsm.W[:,1:Nv])  - (λe/2)*sum(gsm.W[:,Nv+1:end])
+            Q = (N*D/2)*log(1/(2* gsm.β⁻¹* π)) + sum(gsm.R .* LnΠ) + (length(gsm.W)/2)*log(λ/(2π)) - sum(gsm.R .* gsm.Δ²) - (λ/2)*sum(gsm.W)
 
             push!(llhs, l)
             push!(Qs, Q)
@@ -153,8 +125,7 @@ function fit!(gsm::GSMComboBase, Nv, X; λe = 0.01, λw = 0.1, nepochs=100, tol=
             Q_prev = Q
 
             l = max(prefac + sum(logsumexp(gsm.Δ² .* LnΠ, dims=1)), nextfloat(typemin(1.0)))
-
-            Q = (N*D/2)*log(1/(2* gsm.β⁻¹* π)) + sum(gsm.R .* LnΠ) - sum(gsm.R .* gsm.Δ²)  + (length(D*(M-Nv))/2)*log(λw/(2π)) + (length(D*Nv)/2)*log(λe/(2π))  - (λe/2)*sum(gsm.W[:,1:Nv])  - (λe/2)*sum(gsm.W[:,Nv+1:end])
+            Q = (N*D/2)*log(1/(2* gsm.β⁻¹* π)) + sum(gsm.R .* LnΠ) + (length(gsm.W)/2)*log(λ/(2π)) - sum(gsm.R .* gsm.Δ²) - (λ/2)*sum(gsm.W)
 
             push!(llhs, l)
             push!(Qs, Q)
@@ -183,6 +154,72 @@ function fit!(gsm::GSMComboBase, Nv, X; λe = 0.01, λw = 0.1, nepochs=100, tol=
     BIC = log(size(X,1))*length(gsm.W) - 2*llhs[end]
 
     return converged, Qs, llhs, AIC, BIC
+end
+
+
+
+
+function DataMeans(gsm::GSMLinearBase, X)
+    LnΠ = ones(size(gsm.R))
+    for n ∈ axes(LnΠ,2)
+        LnΠ[:,n] .= log.(gsm.πk)
+    end
+
+    mul!(gsm.Ψ, gsm.W, gsm.Φ')
+    Δ² = pairwise(sqeuclidean, gsm.Ψ, X', dims=2)
+    Δ² .*= -(1/(2*gsm.β⁻¹))
+    R = softmax(Δ² .+ LnΠ, dims=1)
+
+    return R'*gsm.Z
+end
+
+
+function DataModes(gsm::GSMLinearBase, X)
+    LnΠ = ones(size(gsm.R))
+    for n ∈ axes(LnΠ,2)
+        LnΠ[:,n] .= log.(gsm.πk)
+    end
+
+    mul!(gsm.Ψ, gsm.W, gsm.Φ')
+    Δ² = pairwise(sqeuclidean, gsm.Ψ, X', dims=2)
+    Δ² .*= -(1/(2*gsm.β⁻¹))
+    R = softmax(Δ² .+ LnΠ, dims=1)
+
+    idx = argmax(R, dims=1)
+    idx = [idx[i][1] for i ∈ 1:length(idx)]
+    return gsm.Z[idx,:]
+end
+
+
+function class_labels(gsm::GSMLinearBase, X)
+    LnΠ = ones(size(gsm.R))
+    for n ∈ axes(LnΠ,2)
+        LnΠ[:,n] .= log.(gsm.πk)
+    end
+
+    mul!(gsm.Ψ, gsm.W, gsm.Φ')
+    Δ² = pairwise(sqeuclidean, gsm.Ψ, X', dims=2)
+    Δ² .*= -(1/(2*gsm.β⁻¹))
+    R = softmax(Δ² .+ LnΠ, dims=1)
+
+    idx = argmax(R, dims=1)
+    idx = [idx[i][1] for i ∈ 1:length(idx)]
+    return idx
+end
+
+
+function responsibility(gsm::GSMLinearBase, X)
+    LnΠ = ones(size(gsm.R))
+    for n ∈ axes(LnΠ,2)
+        LnΠ[:,n] .= log.(gsm.πk)
+    end
+
+    mul!(gsm.Ψ, gsm.W, gsm.Φ')
+    Δ² = pairwise(sqeuclidean, gsm.Ψ, X', dims=2)
+    Δ² .*= -(1/(2*gsm.β⁻¹))
+    R = softmax(Δ² .+ LnΠ, dims=1)
+
+    return R'
 end
 
 

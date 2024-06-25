@@ -12,8 +12,8 @@ function GSM_big(n_nodes, n_rbfs, Nᵥ, s, X; rand_init=false, rng=mk_rng(123), 
 
 
     # 3. create grid of M rbf centers (means)
-    M = zeros(n_rbfs, Nᵥ)
-    M[1:Nᵥ, :] .= Diagonal(ones(Nᵥ))
+    M = rand(rng, f_d, n_rbfs - Nᵥ)'
+    M[1:Nᵥ, :] .= Diagonal(ones(Nᵥ))  # Don't do this
     M[Nᵥ+1:end,:] .= rand(rng, f_d, n_rbfs - Nᵥ)'
 
     # 5. create rbf activation matrix Φ

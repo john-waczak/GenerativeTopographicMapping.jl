@@ -119,34 +119,26 @@ end
 end
 
 
-
-
-
-@testset "gsm-base.jl" begin
+@testset "gsm-linear-base.jl" begin
     Nₑ = 5  # nodes per edge
     Nᵥ = 3  # number of vertices
     D = Nᵥ - 1
     Λ = gtm = GenerativeTopographicMapping.get_barycentric_grid_coords(Nₑ, Nᵥ)
     @test size(Λ, 2) == binomial(Nₑ + D - 1, D)
 
-
     # generate synthetic data
     X = rand(rng, 100, 10)  # test data must be non-negative
 
     k = 10
-    m = 5
-    s = 1
     Nᵥ = 3
-    gsm = GenerativeTopographicMapping.GSMBase(k, m, s, Nᵥ, X)
+    gsm = GenerativeTopographicMapping.GSMLinearBase(k, Nᵥ, X)
 
     Z = gsm.Z
     @test size(Z,1) == binomial(k + Nᵥ - 2, Nᵥ -1)
 end
 
 
-
-
-@testset "GSM MLJ Interface" begin
+@testset "gsm-linear-mlj.jl" begin
     Nₑ = 5  # nodes per edge
     Nᵥ = 3  # number of vertices
     D = Nᵥ - 1
@@ -155,7 +147,7 @@ end
     # generate synthetic dataset for testing with 100 data points, 10 features, and 5 classes
     X = Tables.table(rand(rng, 100,10))
 
-    model = GSM(k=Nₑ, Nv=Nᵥ, nepochs=100, rng=rng)
+    model = GSMLinear(k=Nₑ, Nv=Nᵥ, nepochs=100, rng=rng)
     m = machine(model, X)
     fit!(m, verbosity=0)
 
@@ -174,47 +166,46 @@ end
     rpt = report(m)
     @test Set([:W, :β⁻¹, :Φ, :node_data_means, :Z, :Q, :llhs, :converged, :AIC, :BIC, :idx_vertices]) == Set(keys(rpt))
 
-    # do same but for linear-only model
-    model = GSM(k=Nₑ, Nv=Nᵥ, nepochs=100, rng=rng, nonlinear=false, linear=true, bias=false, make_positive=true)
-    m = machine(model, X)
-    fit!(m, verbosity=0)
-    rpt = report(m)
     @test size(rpt[:Φ], 2) == Nᵥ
 
+
+    # run again with make_positive flag set to true
+    model = GSMLinear(k=Nₑ, Nv=Nᵥ, nepochs=100, rng=rng, make_positive=true)
+    m = machine(model, X)
+    fit!(m, verbosity=0)
+
+    rpt = report(m)
+    W = rpt[:W]
+    @test all(W .≥ 0.0)
 end
 
 
-
-
-@testset "gsm-big-base.jl" begin
-    n_nodes  = 15  # nodes per edge
-    n_rbfs = 5  # nodes per edge
-    Nᵥ = 3  # number of vertices
-    s = 0.05
-
+@testset "gsm-nonlinear-base.jl" begin
     # generate synthetic data
     X = rand(rng, 100, 10)  # test data must be non-negative
 
-    gsm = GenerativeTopographicMapping.GSM_big(n_nodes, n_rbfs, Nᵥ, s, X)
+    k = 10
+    m = 5
+    Nᵥ = 3
+    s = 1
 
+    gsm = GenerativeTopographicMapping.GSMNonlinearBase(k, m, s, Nᵥ, X)
 
-    @test size(gsm.Z, 1) == n_nodes
-    @test gsm.Z[1:Nᵥ,:] == Diagonal(ones(Nᵥ))
+    Z = gsm.Z
+    @test size(Z,1) == binomial(k + Nᵥ - 2, Nᵥ -1)
 end
 
 
-
-
-@testset "GSM Big MLJ Interface" begin
-    n_nodes  = 15  # nodes per edge
-    n_rbfs = 5  # nodes per edge
+@testset "gsm-nonlinear-mlj.jl" begin
+    Nₑ = 5  # nodes per edge
     Nᵥ = 3  # number of vertices
-    s = 0.05
+    D = Nᵥ - 1
+    m = 5
 
     # generate synthetic dataset for testing with 100 data points, 10 features, and 5 classes
     X = Tables.table(rand(rng, 100,10))
 
-    model = GSMBig(n_nodes=n_nodes, n_rbfs=n_rbfs, s=s, Nv=Nᵥ, nepochs=100, rng=rng)
+    model = GSMNonlinear(k=Nₑ, m=m, Nv=Nᵥ, nepochs=100, rng=rng)
     m = machine(model, X)
     fit!(m, verbosity=0)
 
@@ -233,31 +224,31 @@ end
     rpt = report(m)
     @test Set([:W, :β⁻¹, :Φ, :node_data_means, :Z, :Q, :llhs, :converged, :AIC, :BIC, :idx_vertices]) == Set(keys(rpt))
 
-    # make sure we can run the nonlinear version too
-    model = GSMBig(n_nodes=n_nodes, n_rbfs=n_rbfs, s=s, Nv=Nᵥ, nepochs=100, rng=rng, nonlinear=true, linear=true, bias=false)
+    # run again with make_positive flag set to true
+    model = GSMNonlinear(k=Nₑ, Nv=Nᵥ, nepochs=100, rng=rng, make_positive=true)
     m = machine(model, X)
     fit!(m, verbosity=0)
 
+    rpt = report(m)
+    W = rpt[:W]
+    @test all(W .≥ 0.0)
 end
 
 
 
-
-@testset "GSM Combo MLJ Interface" begin
-    n_nodes  = 15  # nodes per edge
-    n_rbfs = 5  # nodes per edge
-    Nᵥ = 3  # number of vertices
-    s = 0.05
+@testset "gsm-big-linear-mlj.jl" begin
+    n_nodes = 100
+    Nv = 3
 
     # generate synthetic dataset for testing with 100 data points, 10 features, and 5 classes
     X = Tables.table(rand(rng, 100,10))
 
-    model = GSMCombo(n_nodes=n_nodes, n_rbfs=n_rbfs, s=s, Nv=Nᵥ, nepochs=100, rng=rng, make_positive=true)
+    model = GSMBigLinear(n_nodes=n_nodes, Nv=Nv, nepochs=100, rng=rng)
     m = machine(model, X)
     fit!(m, verbosity=0)
 
     X̃ = MLJBase.transform(m, X)
-    @test size(matrix(X̃)) == (100, Nᵥ)
+    @test size(matrix(X̃)) == (100, Nv)
 
     classes = MLJBase.predict(m, X)
     @test length(classes) == 100
@@ -271,8 +262,54 @@ end
     rpt = report(m)
     @test Set([:W, :β⁻¹, :Φ, :node_data_means, :Z, :Q, :llhs, :converged, :AIC, :BIC, :idx_vertices]) == Set(keys(rpt))
 
+    # run again with make_positive flag set to true
+    model = GSMBigLinear(n_nodes=n_nodes, Nv=Nv, nepochs=100, rng=rng, make_positive=true)
+    m = machine(model, X)
+    fit!(m, verbosity=0)
+
+    rpt = report(m)
+    W = rpt[:W]
+    @test all(W .≥ 0.0)
 end
 
 
+
+
+@testset "gsm-big-nonlinear-mlj.jl" begin
+    n_nodes = 100
+    n_rbfs = 20
+    Nv = 3
+
+    # generate synthetic dataset for testing with 100 data points, 10 features, and 5 classes
+    X = Tables.table(rand(rng, 100,10))
+
+    model = GSMBigNonlinear(n_nodes=n_nodes, n_rbfs=n_rbfs, Nv=Nv, nepochs=100, rng=rng)
+    m = machine(model, X)
+    fit!(m, verbosity=0)
+
+    X̃ = MLJBase.transform(m, X)
+    @test size(matrix(X̃)) == (100, Nv)
+
+    classes = MLJBase.predict(m, X)
+    @test length(classes) == 100
+
+    Resp = predict_responsibility(m, X)
+    @test all(isapprox.(sum(Resp, dims=2), 1.0))
+
+    fp = fitted_params(m)
+    @test Set([:gsm]) == Set(keys(fp))
+
+    rpt = report(m)
+    @test Set([:W, :β⁻¹, :Φ, :node_data_means, :Z, :Q, :llhs, :converged, :AIC, :BIC, :idx_vertices]) == Set(keys(rpt))
+
+    # run again with make_positive flag set to true
+    model = GSMBigNonlinear(n_nodes=n_nodes, n_rbfs=n_rbfs, Nv=Nv, nepochs=100, rng=rng, make_positive=true)
+    m = machine(model, X)
+    fit!(m, verbosity=0)
+
+    rpt = report(m)
+    W = rpt[:W]
+    @test all(W .≥ 0.0)
+end
 
 

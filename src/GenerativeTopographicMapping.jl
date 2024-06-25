@@ -19,21 +19,49 @@ mk_rng(rng::AbstractRNG) = rng
 mk_rng(int::Integer) = Random.MersenneTwister(int)
 
 include("gtm-base.jl")
-include("gsm-base.jl")
-include("gsm-big-base.jl")
-include("gsm-combo-base.jl")
-
-
 include("gtm-mlj.jl")
-include("gsm-mlj.jl")
-include("gsm-big-mlj.jl")
-include("gsm-combo-mlj.jl")
+
+
+# GSMLinear
+include("gsm-linear-base.jl")
+include("gsm-linear-mlj.jl")
+
+# GSMNonlinear
+include("gsm-nonlinear-base.jl")
+include("gsm-nonlinear-mlj.jl")
+
+# GSMBigLinear
+include("gsm-big-linear-base.jl")
+include("gsm-big-linear-mlj.jl")
+
+# GSMBigNonlinear,
+include("gsm-big-nonlinear-base.jl")
+include("gsm-big-nonlinear-mlj.jl")
+
+
+# GSMCombo
+# GSMBigCombo
+
+
+
+
+# include("gsm-base.jl")
+# include("gsm-big-base.jl")
+# include("gsm-combo-base.jl")
+
+
+# include("gsm-mlj.jl")
+# include("gsm-big-mlj.jl")
+# include("gsm-combo-mlj.jl")
 
 
 export GTM
-export GSM
-export GSMBig
-export GSMCombo
+
+export GSMLinear
+export GSMBigLinear
+
+export GSMNonlinear
+export GSMBigNonlinear
 
 export DataMeans, DataModes
 export responsibility
@@ -48,7 +76,7 @@ export predict_responsibility
 
 
 MLJModelInterface.metadata_pkg.(
-    [GTM, GSM, GSMBig, GSMCombo],
+    [GTM, GSMLinear, GSMNonlinear, GSMBigLinear, GSMBigNonlinear],
     name = "GenerativeTopographicMapping",
     uuid = "110c1e60-17ba-4aeb-8cee-444277a6d160", # see your Project.toml
     url  = "https://github.com/john-waczak/GenerativeTopographicMapping.jl",
@@ -67,28 +95,38 @@ MLJModelInterface.metadata_model(
 )
 
 MLJModelInterface.metadata_model(
-    GSM,
+    GSMLinear,
     input_scitype = MLJModelInterface.Table(MLJModelInterface.Continuous),
     output_scitype  = MLJModelInterface.Table(MLJModelInterface.Continuous),
     supports_weights = false,
-	  load_path    = "GenerativeTopographicMapping.GSM"
+	  load_path    = "GenerativeTopographicMapping.GSMLinear"
 )
 
 MLJModelInterface.metadata_model(
-    GSMBig,
+    GSMNonlinear,
     input_scitype = MLJModelInterface.Table(MLJModelInterface.Continuous),
     output_scitype  = MLJModelInterface.Table(MLJModelInterface.Continuous),
     supports_weights = false,
-	  load_path    = "GenerativeTopographicMapping.GSMBig"
+	  load_path    = "GenerativeTopographicMapping.GSMNonlinear"
 )
 
 MLJModelInterface.metadata_model(
-    GSMCombo,
+    GSMBigLinear,
     input_scitype = MLJModelInterface.Table(MLJModelInterface.Continuous),
     output_scitype  = MLJModelInterface.Table(MLJModelInterface.Continuous),
     supports_weights = false,
-	  load_path    = "GenerativeTopographicMapping.GSMBig"
+	  load_path    = "GenerativeTopographicMapping.GSMBigLinear"
 )
+
+MLJModelInterface.metadata_model(
+    GSMBigNonlinear,
+    input_scitype = MLJModelInterface.Table(MLJModelInterface.Continuous),
+    output_scitype  = MLJModelInterface.Table(MLJModelInterface.Continuous),
+    supports_weights = false,
+	  load_path    = "GenerativeTopographicMapping.GSMBigNonlinear"
+)
+
+
 
 
 
@@ -164,14 +202,14 @@ GTM
 
 
 
-const DOC_GSM= ""*
+const DOC_GSMLinear= ""*
     ""*
     ""
 
 
 
 """
-$(MLJModelInterface.doc_header(GSM))
+$(MLJModelInterface.doc_header(GSMLinear))
 
 Generative Simplex Mapping based based on [Generative Topographic Mapping](https://direct.mit.edu/neco/article/10/1/215-234/6127),
   Neural Computation; Bishop, C.; (1998):
@@ -188,17 +226,12 @@ Train the machine with `fit!(mach, rows=...)`.
 
 # Hyper-parameters
 - `k=10`: Number of latent nodes per edge in the latent space simplex grid.
-- `m=5`:  Number of nonlinear RBF activation functions per edge.
 - `Nv=3`: Number of vertices for the simplex i.e. the number of endmembers.
 - `λ=0.1`:  Model weight regularization parameter.
-- `nonlinear=true`:
-- `linear=false`:
-- `bias=false`:
 - `make_positive=false`:
 - `nepochs=100`: Maximum number of training epochs.
 - `tol=0.1`: Tolerance used for determining convergence during expectation-maximization fitting.
-- `nconverged=4`: Number of steps to repeat at/below `tol` before GSM is considered converged.
-- `rand_init=false`: Whether or not to randomly initalize model weights. If false, weights are set using PCA.
+- `nconverged=4`: Number of steps to repeat at/below `tol` before GSMLinear is considered converged.
 - `rng=123`: random seed or random number generator used for model weight initialization.
 
 # Operations
@@ -208,7 +241,7 @@ Train the machine with `fit!(mach, rows=...)`.
 # Fitted parameters
 The fields of `fitted_params(mach)` are:
 
-- `gsm`: The `GenerativeSimplexMap` object fit by the `GSM` model. Contains node coordinates, RBF means, RBF variance, weights, etc.
+- `gsm`: The `GenerativeSimplexMap` object fit by the `GSMLinear` model. Contains node coordinates, RBF means, RBF variance, weights, etc.
 
 
 # Report
@@ -227,7 +260,7 @@ The fields of `report(mach)` are:
 # Examples
 ```
 using MLJ
-gsm = @load GSM pkg=GenerativeTopographicMapping
+gsm = @load GSMLinear pkg=GenerativeTopographicMapping
 model = gsm()
 X, y = make_blob(100, 10; centers=5) # synthetic data
 mach = machine(model, X) |> fit!
@@ -237,166 +270,8 @@ rpt = report(mach)
 classes = rpt.classes
 ```
 """
-GSM
+GSMLinear
 
-
-
-
-const DOC_GSMBig= ""*
-    ""*
-    ""
-
-
-
-"""
-$(MLJModelInterface.doc_header(GSMBig))
-
-Generative Simplex Mapping based based on [Generative Topographic Mapping](https://direct.mit.edu/neco/article/10/1/215-234/6127),
-  Neural Computation; Bishop, C.; (1998):
-  \"GTM: The Generative Topographic Mapping\"
-where the latent points are configured as a gridded n-simplex.
-
-# Training data
-In MLJ or MLJBase, bind an instance `model` to data with
-    mach = machine(model, X)
-where
-- `X`: `Table` of input features whose columns are of scitype `Continuous.`
-
-Train the machine with `fit!(mach, rows=...)`.
-
-# Hyper-parameters
-- `n_nodes=1000`: Number of latent nodes.
-- `n_rbfs=500`:  Number of nonlinear RBF activation functions.
-- `Nv=3`: Number of vertices for the simplex i.e. the number of endmembers.
-- `s=0.05`: Width paramter for RBF functions
-- `λ=0.1`:  Model weight regularization parameter.
-- `nonlinear=true`:
-- `linear=false`:
-- `bias=false`:
-- `make_positive=false`:
-- `nepochs=100`: Maximum number of training epochs.
-- `tol=0.1`: Tolerance used for determining convergence during expectation-maximization fitting.
-- `nconverged=4`: Number of steps to repeat at/below `tol` before GSM is considered converged.
-- `rand_init=false`: Whether or not to randomly initalize model weights. If false, weights are set using PCA.
-- `rng=123`: random seed or random number generator used for model weight initialization.
-
-# Operations
-- `transform(mach, X)`: returns the coordinates `ξᵢ` cooresponding to the mean of the latent node responsibility distribution.
-- `predict(mach, X)`: returns the index of the node corresponding to the mode of the latent node responsibility distribution.
-
-# Fitted parameters
-The fields of `fitted_params(mach)` are:
-
-- `gsm`: The `GenerativeSimplexMap` object fit by the `GSMBig` model. Contains node coordinates, RBF means, RBF variance, weights, etc.
-
-
-# Report
-The fields of `report(mach)` are:
-- `W`: the fitted GTM weight matrix
-- `β⁻¹`: the fitted GTM variance
-- `Φ`: the node RBF activation matrix
-- `node_data_means`: the projected node means in the data space
-- `Z`: the node coordinates in the latent space
-- `Q`: Objective function maximized during EM routine
-- `llhs`: the log-likelihood values from each iteration of the training loop
-- `converged`: is `true` if the convergence critera were met before reaching `niter`
-- `AIC`: the Aikike Information Criterion
-- `BIC`: the Bayesian Information Criterion
-
-# Examples
-```
-using MLJ
-gsm = @load GSMBig pkg=GenerativeTopographicMapping
-model = gsm()
-X, y = make_blob(100, 10; centers=5) # synthetic data
-mach = machine(model, X) |> fit!
-X̃ = transform(mach, X)
-
-rpt = report(mach)
-classes = rpt.classes
-```
-"""
-GSMBig
-
-
-
-
-
-
-
-const DOC_GSMCombo= ""*
-    ""*
-    ""
-
-
-
-"""
-$(MLJModelInterface.doc_header(GSMCombo))
-
-Generative Simplex Mapping based based on [Generative Topographic Mapping](https://direct.mit.edu/neco/article/10/1/215-234/6127),
-  Neural Computation; Bishop, C.; (1998):
-  \"GTM: The Generative Topographic Mapping\"
-where the latent points are configured as a gridded n-simplex.
-
-# Training data
-In MLJ or MLJBase, bind an instance `model` to data with
-    mach = machine(model, X)
-where
-- `X`: `Table` of input features whose columns are of scitype `Continuous.`
-
-Train the machine with `fit!(mach, rows=...)`.
-
-# Hyper-parameters
-- `n_nodes=1000`: Number of latent nodes.
-- `n_rbfs=500`:  Number of nonlinear RBF activation functions.
-- `Nv=3`: Number of vertices for the simplex i.e. the number of endmembers.
-- `s=0.05`: Width paramter for RBF functions
-- `λe=0.01`:  Model weight regularization parameter for linear endmembers.
-- `λw=0.1`:  Model weight regularization parameter for nonlinear activations.
-- `make_positive=false`:
-- `nepochs=100`: Maximum number of training epochs.
-- `tol=0.1`: Tolerance used for determining convergence during expectation-maximization fitting.
-- `nconverged=4`: Number of steps to repeat at/below `tol` before GSM is considered converged.
-- `rand_init=false`: Whether or not to randomly initalize model weights. If false, weights are set using PCA.
-- `rng=123`: random seed or random number generator used for model weight initialization.
-
-# Operations
-- `transform(mach, X)`: returns the coordinates `ξᵢ` cooresponding to the mean of the latent node responsibility distribution.
-- `predict(mach, X)`: returns the index of the node corresponding to the mode of the latent node responsibility distribution.
-
-# Fitted parameters
-The fields of `fitted_params(mach)` are:
-
-- `gsm`: The `GenerativeSimplexMap` object fit by the `GSMCombo` model. Contains node coordinates, RBF means, RBF variance, weights, etc.
-
-
-# Report
-The fields of `report(mach)` are:
-- `W`: the fitted GTM weight matrix
-- `β⁻¹`: the fitted GTM variance
-- `Φ`: the node RBF activation matrix
-- `node_data_means`: the projected node means in the data space
-- `Z`: the node coordinates in the latent space
-- `Q`: Objective function maximized during EM routine
-- `llhs`: the log-likelihood values from each iteration of the training loop
-- `converged`: is `true` if the convergence critera were met before reaching `niter`
-- `AIC`: the Aikike Information Criterion
-- `BIC`: the Bayesian Information Criterion
-
-# Examples
-```
-using MLJ
-gsm = @load GSMCombo pkg=GenerativeTopographicMapping
-model = gsm()
-X, y = make_blob(100, 10; centers=5) # synthetic data
-mach = machine(model, X) |> fit!
-X̃ = transform(mach, X)
-
-rpt = report(mach)
-classes = rpt.classes
-```
-"""
-GSMCombo
 
 
 
