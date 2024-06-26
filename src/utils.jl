@@ -16,9 +16,9 @@ function get_barycentric_grid_coords(Nₑ, Nᵥ)
 end
 
 # Define the basis elements
-linear_elem(r, m) = (r ≤ 1/m) ? -m*(r-(1/m)) : 0.0
-quadratic_elem(r, m) = (r ≤ 1/m) ? -m^2*(r-(1/m))*(r+(1/m)) : 0.0
+linear_elem(Δ, m) = (Δ ≤ 1/m) ? m*((1/m)-Δ) : 0.0
+quadratic_elem(Δ, m) = (Δ ≤ 1/m) ? m^2*((1/m)-Δ)*(Δ+(1/m)) : 0.0
 
 
-
-quadratic_elem_big(r, s) = (r ≤ s) ? -(r-s)*(r+s)/s^2 : 0.0
+linear_elem_big(Δ, s) = (Δ ≤ s) ? (s-Δ)/s : 0.0
+quadratic_elem_big(Δ, s) = (Δ ≤ s) ? (s-Δ)*(Δ+s)/s^2 : 0.0

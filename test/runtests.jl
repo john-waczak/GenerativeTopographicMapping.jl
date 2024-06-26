@@ -313,3 +313,80 @@ end
 end
 
 
+
+@testset "gsm-combo-mlj.jl" begin
+    k = 10
+    m = 5
+    Nv = 3
+
+    # generate synthetic dataset for testing with 100 data points, 10 features, and 5 classes
+    X = Tables.table(rand(rng, 100,10))
+
+    model = GSMCombo(k=k, m=m, Nv=Nv, nepochs=100, rng=rng)
+    mach = machine(model, X)
+    fit!(mach, verbosity=0)
+
+    X̃ = MLJBase.transform(mach, X)
+    @test size(matrix(X̃)) == (100, Nv)
+
+    classes = MLJBase.predict(mach, X)
+    @test length(classes) == 100
+
+    Resp = predict_responsibility(mach, X)
+    @test all(isapprox.(sum(Resp, dims=2), 1.0))
+
+    fp = fitted_params(mach)
+    @test Set([:gsm]) == Set(keys(fp))
+
+    rpt = report(mach)
+    @test Set([:W, :β⁻¹, :Φ, :node_data_means, :Z, :Q, :llhs, :converged, :AIC, :BIC, :idx_vertices]) == Set(keys(rpt))
+
+    # run again with make_positive flag set to true
+    model = GSMCombo(k=k, m=m, Nv=Nv, nepochs=100, rng=rng, make_positive=true)
+    mach = machine(model, X)
+    fit!(mach, verbosity=0)
+
+    rpt = report(mach)
+    W = rpt[:W]
+    @test all(W .≥ 0.0)
+end
+
+
+
+@testset "gsm-big-combo-mlj.jl" begin
+    n_nodes = 100
+    n_rbfs = 20
+    Nv = 3
+
+    # generate synthetic dataset for testing with 100 data points, 10 features, and 5 classes
+    X = Tables.table(rand(rng, 100,10))
+
+    model = GSMBigCombo(n_nodes=n_nodes, n_rbfs=n_rbfs, Nv=Nv, nepochs=100, rng=rng)
+    m = machine(model, X)
+    fit!(m, verbosity=0)
+
+    X̃ = MLJBase.transform(m, X)
+    @test size(matrix(X̃)) == (100, Nv)
+
+    classes = MLJBase.predict(m, X)
+    @test length(classes) == 100
+
+    Resp = predict_responsibility(m, X)
+    @test all(isapprox.(sum(Resp, dims=2), 1.0))
+
+    fp = fitted_params(m)
+    @test Set([:gsm]) == Set(keys(fp))
+
+    rpt = report(m)
+    @test Set([:W, :β⁻¹, :Φ, :node_data_means, :Z, :Q, :llhs, :converged, :AIC, :BIC, :idx_vertices]) == Set(keys(rpt))
+
+    # run again with make_positive flag set to true
+    model = GSMBigCombo(n_nodes=n_nodes, n_rbfs=n_rbfs, Nv=Nv, nepochs=100, rng=rng, make_positive=true)
+    m = machine(model, X)
+    fit!(m, verbosity=0)
+
+    rpt = report(m)
+    W = rpt[:W]
+    @test all(W .≥ 0.0)
+end
+

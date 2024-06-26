@@ -30,6 +30,10 @@ include("gsm-linear-mlj.jl")
 include("gsm-nonlinear-base.jl")
 include("gsm-nonlinear-mlj.jl")
 
+# GSMCombo
+include("gsm-combo-base.jl")
+include("gsm-combo-mlj.jl")
+
 # GSMBigLinear
 include("gsm-big-linear-base.jl")
 include("gsm-big-linear-mlj.jl")
@@ -38,21 +42,9 @@ include("gsm-big-linear-mlj.jl")
 include("gsm-big-nonlinear-base.jl")
 include("gsm-big-nonlinear-mlj.jl")
 
-
-# GSMCombo
 # GSMBigCombo
-
-
-
-
-# include("gsm-base.jl")
-# include("gsm-big-base.jl")
-# include("gsm-combo-base.jl")
-
-
-# include("gsm-mlj.jl")
-# include("gsm-big-mlj.jl")
-# include("gsm-combo-mlj.jl")
+include("gsm-big-combo-base.jl")
+include("gsm-big-combo-mlj.jl")
 
 
 export GTM
@@ -62,6 +54,9 @@ export GSMBigLinear
 
 export GSMNonlinear
 export GSMBigNonlinear
+
+export GSMCombo
+export GSMBigCombo
 
 export DataMeans, DataModes
 export responsibility
@@ -76,7 +71,7 @@ export predict_responsibility
 
 
 MLJModelInterface.metadata_pkg.(
-    [GTM, GSMLinear, GSMNonlinear, GSMBigLinear, GSMBigNonlinear],
+    [GTM, GSMLinear, GSMNonlinear, GSMBigLinear, GSMBigNonlinear, GSMCombo, GSMBigCombo],
     name = "GenerativeTopographicMapping",
     uuid = "110c1e60-17ba-4aeb-8cee-444277a6d160", # see your Project.toml
     url  = "https://github.com/john-waczak/GenerativeTopographicMapping.jl",
@@ -124,6 +119,23 @@ MLJModelInterface.metadata_model(
     output_scitype  = MLJModelInterface.Table(MLJModelInterface.Continuous),
     supports_weights = false,
 	  load_path    = "GenerativeTopographicMapping.GSMBigNonlinear"
+)
+
+
+MLJModelInterface.metadata_model(
+    GSMCombo,
+    input_scitype = MLJModelInterface.Table(MLJModelInterface.Continuous),
+    output_scitype  = MLJModelInterface.Table(MLJModelInterface.Continuous),
+    supports_weights = false,
+	  load_path    = "GenerativeTopographicMapping.GSMCombo"
+)
+
+MLJModelInterface.metadata_model(
+    GSMBigCombo,
+    input_scitype = MLJModelInterface.Table(MLJModelInterface.Continuous),
+    output_scitype  = MLJModelInterface.Table(MLJModelInterface.Continuous),
+    supports_weights = false,
+	  load_path    = "GenerativeTopographicMapping.GSMBigCombo"
 )
 
 
