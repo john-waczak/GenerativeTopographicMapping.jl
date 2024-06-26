@@ -22,8 +22,7 @@ function GSMBigNonlinearBase(n_nodes, n_rbfs, Nᵥ, s, X; rng=mk_rng(123))
     Φ =  exp.(-Δ² ./ (2*s^2))  # using gaussian RBF kernel
 
 
-    # 5. perform PCA
- on data to get principle component variances
+    # 5. perform PCA on data to get principle component variances
     data_means = vec(mean(Array(X), dims=1))
     D = Array(X)' .- data_means
     Svd = svd(D)
