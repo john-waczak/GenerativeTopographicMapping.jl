@@ -147,7 +147,7 @@ end
     # generate synthetic dataset for testing with 100 data points, 10 features, and 5 classes
     X = Tables.table(rand(rng, 100,10))
 
-    model = GSMLinear(k=Nₑ, Nv=Nᵥ, nepochs=100, rng=rng)
+    model = GSMLinear(k=Nₑ, Nv=Nᵥ, nepochs=100, rand_init=false, rng=rng)
     m = machine(model, X)
     fit!(m, verbosity=0)
 
@@ -170,7 +170,7 @@ end
 
 
     # run again with make_positive flag set to true
-    model = GSMLinear(k=Nₑ, Nv=Nᵥ, nepochs=100, rng=rng, make_positive=true)
+    model = GSMLinear(k=Nₑ, Nv=Nᵥ, nepochs=100, make_positive=true, rand_init=true, rng=rng)
     m = machine(model, X)
     fit!(m, verbosity=0)
 
@@ -178,6 +178,8 @@ end
     W = rpt[:W]
     @test all(W .≥ 0.0)
 end
+
+
 
 
 @testset "gsm-nonlinear-base.jl" begin
@@ -205,7 +207,7 @@ end
     # generate synthetic dataset for testing with 100 data points, 10 features, and 5 classes
     X = Tables.table(rand(rng, 100,10))
 
-    model = GSMNonlinear(k=Nₑ, m=m, Nv=Nᵥ, nepochs=100, rng=rng)
+    model = GSMNonlinear(k=Nₑ, m=m, Nv=Nᵥ, nepochs=100, rand_init=false, rng=rng)
     m = machine(model, X)
     fit!(m, verbosity=0)
 
@@ -225,7 +227,7 @@ end
     @test Set([:W, :β⁻¹, :Φ, :node_data_means, :Z, :Q, :llhs, :converged, :AIC, :BIC, :idx_vertices]) == Set(keys(rpt))
 
     # run again with make_positive flag set to true
-    model = GSMNonlinear(k=Nₑ, Nv=Nᵥ, nepochs=100, rng=rng, make_positive=true)
+    model = GSMNonlinear(k=Nₑ, Nv=Nᵥ, nepochs=100, make_positive=true, rand_init=true, rng=rng)
     m = machine(model, X)
     fit!(m, verbosity=0)
 
@@ -243,7 +245,7 @@ end
     # generate synthetic dataset for testing with 100 data points, 10 features, and 5 classes
     X = Tables.table(rand(rng, 100,10))
 
-    model = GSMBigLinear(n_nodes=n_nodes, Nv=Nv, nepochs=100, rng=rng)
+    model = GSMBigLinear(n_nodes=n_nodes, Nv=Nv, nepochs=100, rand_init=false, rng=rng)
     m = machine(model, X)
     fit!(m, verbosity=0)
 
@@ -263,7 +265,7 @@ end
     @test Set([:W, :β⁻¹, :Φ, :node_data_means, :Z, :Q, :llhs, :converged, :AIC, :BIC, :idx_vertices]) == Set(keys(rpt))
 
     # run again with make_positive flag set to true
-    model = GSMBigLinear(n_nodes=n_nodes, Nv=Nv, nepochs=100, rng=rng, make_positive=true)
+    model = GSMBigLinear(n_nodes=n_nodes, Nv=Nv, nepochs=100, make_positive=true, rand_init=true, rng=rng)
     m = machine(model, X)
     fit!(m, verbosity=0)
 
@@ -283,7 +285,7 @@ end
     # generate synthetic dataset for testing with 100 data points, 10 features, and 5 classes
     X = Tables.table(rand(rng, 100,10))
 
-    model = GSMBigNonlinear(n_nodes=n_nodes, n_rbfs=n_rbfs, Nv=Nv, nepochs=100, rng=rng)
+    model = GSMBigNonlinear(n_nodes=n_nodes, n_rbfs=n_rbfs, Nv=Nv, nepochs=100, rand_init=false, rng=rng)
     m = machine(model, X)
     fit!(m, verbosity=0)
 
@@ -303,7 +305,7 @@ end
     @test Set([:W, :β⁻¹, :Φ, :node_data_means, :Z, :Q, :llhs, :converged, :AIC, :BIC, :idx_vertices]) == Set(keys(rpt))
 
     # run again with make_positive flag set to true
-    model = GSMBigNonlinear(n_nodes=n_nodes, n_rbfs=n_rbfs, Nv=Nv, nepochs=100, rng=rng, make_positive=true)
+    model = GSMBigNonlinear(n_nodes=n_nodes, n_rbfs=n_rbfs, Nv=Nv, nepochs=100, make_positive=true, rand_init=true, rng=rng)
     m = machine(model, X)
     fit!(m, verbosity=0)
 
@@ -322,7 +324,8 @@ end
     # generate synthetic dataset for testing with 100 data points, 10 features, and 5 classes
     X = Tables.table(rand(rng, 100,10))
 
-    model = GSMCombo(k=k, m=m, Nv=Nv, nepochs=100, rng=rng)
+    # model = GSMCombo(k=k, m=m, Nv=Nv, nepochs=100, rand_init=false, rng=rng, zero_init=true)
+    model = GSMCombo(k=k, m=m, Nv=Nv, nepochs=100, rand_init=true, rng=rng, zero_init=true)
     mach = machine(model, X)
     fit!(mach, verbosity=0)
 
@@ -342,7 +345,7 @@ end
     @test Set([:W, :β⁻¹, :Φ, :node_data_means, :Z, :Q, :llhs, :converged, :AIC, :BIC, :idx_vertices]) == Set(keys(rpt))
 
     # run again with make_positive flag set to true
-    model = GSMCombo(k=k, m=m, Nv=Nv, nepochs=100, rng=rng, make_positive=true)
+    model = GSMCombo(k=k, m=m, Nv=Nv, nepochs=100, make_positive=true, rand_init=true, rng=rng, zero_init=false)
     mach = machine(model, X)
     fit!(mach, verbosity=0)
 
@@ -361,7 +364,7 @@ end
     # generate synthetic dataset for testing with 100 data points, 10 features, and 5 classes
     X = Tables.table(rand(rng, 100,10))
 
-    model = GSMBigCombo(n_nodes=n_nodes, n_rbfs=n_rbfs, Nv=Nv, nepochs=100, rng=rng)
+    model = GSMBigCombo(n_nodes=n_nodes, n_rbfs=n_rbfs, Nv=Nv, nepochs=100, rand_init=false, rng=rng, zero_init=false)
     m = machine(model, X)
     fit!(m, verbosity=0)
 
@@ -381,7 +384,7 @@ end
     @test Set([:W, :β⁻¹, :Φ, :node_data_means, :Z, :Q, :llhs, :converged, :AIC, :BIC, :idx_vertices]) == Set(keys(rpt))
 
     # run again with make_positive flag set to true
-    model = GSMBigCombo(n_nodes=n_nodes, n_rbfs=n_rbfs, Nv=Nv, nepochs=100, rng=rng, make_positive=true)
+    model = GSMBigCombo(n_nodes=n_nodes, n_rbfs=n_rbfs, Nv=Nv, nepochs=100, make_positive=true, rand_init=true, rng=rng, zero_init=true)
     m = machine(model, X)
     fit!(m, verbosity=0)
 

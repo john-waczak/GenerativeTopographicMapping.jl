@@ -8,11 +8,12 @@ mutable struct GSMBigNonlinear<: MLJModelInterface.Unsupervised
     nepochs::Int
     tol::Float64
     nconverged::Int
+    rand_init::Bool
     rng::Any
 end
 
-function GSMBigNonlinear(; n_nodes=1000, n_rbfs=500, s=0.05, Nv=3, λ=0.1, make_positive=false, nepochs=100, tol=1e-3, nconverged=4, rng=123)
-    model = GSMBigNonlinear(n_nodes, n_rbfs, s, Nv, λ, make_positive, nepochs, tol, nconverged, mk_rng(rng))
+function GSMBigNonlinear(; n_nodes=1000, n_rbfs=500, s=0.05, Nv=3, λ=0.1, make_positive=false, nepochs=100, tol=1e-3, nconverged=4, rand_init=true, rng=123)
+    model = GSMBigNonlinear(n_nodes, n_rbfs, s, Nv, λ, make_positive, nepochs, tol, nconverged, rand_init, mk_rng(rng))
     message = MLJModelInterface.clean!(model)
     isempty(message) || @warn message
     return model
@@ -80,7 +81,7 @@ function MLJModelInterface.fit(m::GSMBigNonlinear, verbosity, Datatable)
     end
 
     # 1. build the GTM
-    gsm = GSMBigNonlinearBase(m.n_nodes, m.n_rbfs, m.Nv, m.s, X; rng=m.rng)
+    gsm = GSMBigNonlinearBase(m.n_nodes, m.n_rbfs, m.Nv, m.s, X; rand_init=m.rand_init, rng=m.rng)
 
     # 2. Fit the GSM
     converged, Qs, llhs, AIC, BIC = fit!(

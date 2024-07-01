@@ -6,13 +6,14 @@ mutable struct GSMLinear<: MLJModelInterface.Unsupervised
     nepochs::Int
     tol::Float64
     nconverged::Int
+    rand_init::Bool
     rng::Any
 end
 
 
 
-function GSMLinear(; k=10, Nv=3, λ=0.1, make_positive=false, nepochs=100, tol=1e-3, nconverged=4, rand_init=false, rng=123)
-    model = GSMLinear(k, Nv, λ, make_positive, nepochs, tol, nconverged, mk_rng(rng))
+function GSMLinear(; k=10, Nv=3, λ=0.1, make_positive=false, nepochs=100, tol=1e-3, nconverged=4, rand_init=true, rng=123)
+    model = GSMLinear(k, Nv, λ, make_positive, nepochs, tol, nconverged, rand_init, mk_rng(rng))
     message = MLJModelInterface.clean!(model)
     isempty(message) || @warn message
     return model
@@ -69,7 +70,7 @@ function MLJModelInterface.fit(m::GSMLinear, verbosity, Datatable)
     end
 
     # 1. build the GTM
-    gsm = GSMLinearBase(m.k, m.Nv, X; rng=m.rng)
+    gsm = GSMLinearBase(m.k, m.Nv, X; rand_init=m.rand_init, rng=m.rng)
 
     # 2. Fit the GSM
     converged, Qs, llhs, AIC, BIC = fit!(

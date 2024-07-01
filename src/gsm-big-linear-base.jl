@@ -1,4 +1,4 @@
-function GSMBigLinearBase(n_nodes, Nᵥ, X; rng=mk_rng(123))
+function GSMBigLinearBase(n_nodes, Nᵥ, X; rand_init=true, rng=mk_rng(123))
     # 1. define grid parameters
     n_records, n_features = size(X)
 
@@ -15,14 +15,39 @@ function GSMBigLinearBase(n_nodes, Nᵥ, X; rng=mk_rng(123))
     data_means = vec(mean(Array(X), dims=1))
     D = Array(X)' .- data_means
     Svd = svd(D)
+
+    U = Svd.U[:, 1:Nᵥ]
     pca_vars = (abs2.(Svd.S) ./ (n_records-1))[1:Nᵥ+1]
 
 
     # 4. Initialize weights
     W = rand(rng, n_features, size(Φ, 2))
 
+    if !(rand_init)
+        # convert to loadings
+        for i ∈ 1:Nᵥ
+            U[:,i] .= U[:,i] .* sqrt(pca_vars[i])
+        end
+
+        Znorm = copy(Z)
+        for i ∈ 1:Nᵥ
+            Znorm[:,i] = (Znorm[:,i] .-  mean(Znorm[:,i])) ./ std(Znorm[:,i])
+        end
+
+        W = U*Znorm' * pinv(Φ')
+    end
+
+
     # 5. Initialize data manifold Ψ using W and Φ
     Ψ = W * Φ'
+
+    # add back the means if using PCA
+    if !(rand_init)
+        for i ∈ axes(Ψ,1)
+            Ψ[i,:] .= Ψ[i,:] .+ data_means[i]
+        end
+    end
+
 
     # 6. Set the variance parameter
     β⁻¹ = max(pca_vars[Nᵥ+1], mean(pairwise(sqeuclidean, Ψ, dims=2))/2)
