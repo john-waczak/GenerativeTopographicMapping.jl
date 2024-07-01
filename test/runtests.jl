@@ -146,18 +146,20 @@ end
 
     # generate synthetic dataset for testing with 100 data points, 10 features, and 5 classes
     X = Tables.table(rand(rng, 100,10))
+    N2 = 15
+    X2 = Tables.table(rand(rng, N2, 10))
 
     model = GSMLinear(k=Nₑ, Nv=Nᵥ, nepochs=100, rand_init=false, rng=rng)
     m = machine(model, X)
     fit!(m, verbosity=0)
 
-    X̃ = MLJBase.transform(m, X)
-    @test size(matrix(X̃)) == (100, Nᵥ)
+    X̃ = MLJBase.transform(m, X2)
+    @test size(matrix(X̃)) == (N2, Nᵥ)
 
-    classes = MLJBase.predict(m, X)
-    @test length(classes) == 100
+    classes = MLJBase.predict(m, X2)
+    @test length(classes) == N2
 
-    Resp = predict_responsibility(m, X)
+    Resp = predict_responsibility(m, X2)
     @test all(isapprox.(sum(Resp, dims=2), 1.0))
 
     fp = fitted_params(m)
@@ -177,9 +179,12 @@ end
     rpt = report(m)
     W = rpt[:W]
     @test all(W .≥ 0.0)
+
+    # attempt the data reconstruction
+    X_gsm = data_reconstruction(m, X)
+    @test size(X_gsm) == (100, 10)
+
 end
-
-
 
 
 @testset "gsm-nonlinear-base.jl" begin
@@ -206,34 +211,40 @@ end
 
     # generate synthetic dataset for testing with 100 data points, 10 features, and 5 classes
     X = Tables.table(rand(rng, 100,10))
+    N2 = 15
+    X2 = Tables.table(rand(rng, N2, 10))
 
     model = GSMNonlinear(k=Nₑ, m=m, Nv=Nᵥ, nepochs=100, rand_init=false, rng=rng)
-    m = machine(model, X)
-    fit!(m, verbosity=0)
+    mach = machine(model, X)
+    fit!(mach, verbosity=0)
 
-    X̃ = MLJBase.transform(m, X)
-    @test size(matrix(X̃)) == (100, Nᵥ)
+    X̃ = MLJBase.transform(mach, X2)
+    @test size(matrix(X̃)) == (N2, Nᵥ)
 
-    classes = MLJBase.predict(m, X)
-    @test length(classes) == 100
+    classes = MLJBase.predict(mach, X2)
+    @test length(classes) == N2
 
-    Resp = predict_responsibility(m, X)
+    Resp = predict_responsibility(mach, X2)
     @test all(isapprox.(sum(Resp, dims=2), 1.0))
 
-    fp = fitted_params(m)
+    fp = fitted_params(mach)
     @test Set([:gsm]) == Set(keys(fp))
 
-    rpt = report(m)
+    rpt = report(mach)
     @test Set([:W, :β⁻¹, :Φ, :node_data_means, :Z, :Q, :llhs, :converged, :AIC, :BIC, :idx_vertices]) == Set(keys(rpt))
 
     # run again with make_positive flag set to true
-    model = GSMNonlinear(k=Nₑ, Nv=Nᵥ, nepochs=100, make_positive=true, rand_init=true, rng=rng)
-    m = machine(model, X)
-    fit!(m, verbosity=0)
+    model = GSMNonlinear(k=Nₑ, m=m, Nv=Nᵥ, nepochs=100, make_positive=true, rand_init=true, rng=rng)
+    mach = machine(model, X)
+    fit!(mach, verbosity=0)
 
-    rpt = report(m)
+    rpt = report(mach)
     W = rpt[:W]
     @test all(W .≥ 0.0)
+
+    # attempt the data reconstruction
+    X_gsm = data_reconstruction(mach, X)
+    @test size(X_gsm) == (100, 10)
 end
 
 
@@ -244,18 +255,21 @@ end
 
     # generate synthetic dataset for testing with 100 data points, 10 features, and 5 classes
     X = Tables.table(rand(rng, 100,10))
+    N2 = 15
+    X2 = Tables.table(rand(rng, N2, 10))
+
 
     model = GSMBigLinear(n_nodes=n_nodes, Nv=Nv, nepochs=100, rand_init=false, rng=rng)
     m = machine(model, X)
     fit!(m, verbosity=0)
 
-    X̃ = MLJBase.transform(m, X)
-    @test size(matrix(X̃)) == (100, Nv)
+    X̃ = MLJBase.transform(m, X2)
+    @test size(matrix(X̃)) == (N2, Nv)
 
-    classes = MLJBase.predict(m, X)
-    @test length(classes) == 100
+    classes = MLJBase.predict(m, X2)
+    @test length(classes) == N2
 
-    Resp = predict_responsibility(m, X)
+    Resp = predict_responsibility(m, X2)
     @test all(isapprox.(sum(Resp, dims=2), 1.0))
 
     fp = fitted_params(m)
@@ -272,6 +286,11 @@ end
     rpt = report(m)
     W = rpt[:W]
     @test all(W .≥ 0.0)
+
+    # attempt the data reconstruction
+    X_gsm = data_reconstruction(m, X)
+    @test size(X_gsm) == (100, 10)
+
 end
 
 
@@ -284,18 +303,21 @@ end
 
     # generate synthetic dataset for testing with 100 data points, 10 features, and 5 classes
     X = Tables.table(rand(rng, 100,10))
+    N2 = 15
+    X2 = Tables.table(rand(rng, N2, 10))
+
 
     model = GSMBigNonlinear(n_nodes=n_nodes, n_rbfs=n_rbfs, Nv=Nv, nepochs=100, rand_init=false, rng=rng)
     m = machine(model, X)
     fit!(m, verbosity=0)
 
-    X̃ = MLJBase.transform(m, X)
-    @test size(matrix(X̃)) == (100, Nv)
+    X̃ = MLJBase.transform(m, X2)
+    @test size(matrix(X̃)) == (N2, Nv)
 
-    classes = MLJBase.predict(m, X)
-    @test length(classes) == 100
+    classes = MLJBase.predict(m, X2)
+    @test length(classes) == N2
 
-    Resp = predict_responsibility(m, X)
+    Resp = predict_responsibility(m, X2)
     @test all(isapprox.(sum(Resp, dims=2), 1.0))
 
     fp = fitted_params(m)
@@ -312,6 +334,11 @@ end
     rpt = report(m)
     W = rpt[:W]
     @test all(W .≥ 0.0)
+
+    # attempt the data reconstruction
+    X_gsm = data_reconstruction(m, X)
+    @test size(X_gsm) == (100, 10)
+
 end
 
 
@@ -323,19 +350,20 @@ end
 
     # generate synthetic dataset for testing with 100 data points, 10 features, and 5 classes
     X = Tables.table(rand(rng, 100,10))
+    N2 = 15
+    X2 = Tables.table(rand(rng, N2, 10))
 
-    # model = GSMCombo(k=k, m=m, Nv=Nv, nepochs=100, rand_init=false, rng=rng, zero_init=true)
     model = GSMCombo(k=k, m=m, Nv=Nv, nepochs=100, rand_init=true, rng=rng, zero_init=true)
     mach = machine(model, X)
     fit!(mach, verbosity=0)
 
-    X̃ = MLJBase.transform(mach, X)
-    @test size(matrix(X̃)) == (100, Nv)
+    X̃ = MLJBase.transform(mach, X2)
+    @test size(matrix(X̃)) == (N2, Nv)
 
-    classes = MLJBase.predict(mach, X)
-    @test length(classes) == 100
+    classes = MLJBase.predict(mach, X2)
+    @test length(classes) == N2
 
-    Resp = predict_responsibility(mach, X)
+    Resp = predict_responsibility(mach, X2)
     @test all(isapprox.(sum(Resp, dims=2), 1.0))
 
     fp = fitted_params(mach)
@@ -352,6 +380,11 @@ end
     rpt = report(mach)
     W = rpt[:W]
     @test all(W .≥ 0.0)
+
+    # attempt the data reconstruction
+    X_gsm = data_reconstruction(mach, X)
+    @test size(X_gsm) == (100, 10)
+
 end
 
 
@@ -363,18 +396,22 @@ end
 
     # generate synthetic dataset for testing with 100 data points, 10 features, and 5 classes
     X = Tables.table(rand(rng, 100,10))
+    N2 = 15
+    X2 = Tables.table(rand(rng, N2, 10))
+
 
     model = GSMBigCombo(n_nodes=n_nodes, n_rbfs=n_rbfs, Nv=Nv, nepochs=100, rand_init=false, rng=rng, zero_init=false)
     m = machine(model, X)
+
     fit!(m, verbosity=0)
 
-    X̃ = MLJBase.transform(m, X)
-    @test size(matrix(X̃)) == (100, Nv)
+    X̃ = MLJBase.transform(m, X2)
+    @test size(matrix(X̃)) == (N2, Nv)
 
-    classes = MLJBase.predict(m, X)
-    @test length(classes) == 100
+    classes = MLJBase.predict(m, X2)
+    @test length(classes) == N2
 
-    Resp = predict_responsibility(m, X)
+    Resp = predict_responsibility(m, X2)
     @test all(isapprox.(sum(Resp, dims=2), 1.0))
 
     fp = fitted_params(m)
@@ -391,5 +428,11 @@ end
     rpt = report(m)
     W = rpt[:W]
     @test all(W .≥ 0.0)
+
+    # attempt the data reconstruction
+    X_gsm = data_reconstruction(m, X)
+    @test size(X_gsm) == (100, 10)
+
+    println(m.model)
 end
 

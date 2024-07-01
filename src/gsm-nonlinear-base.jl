@@ -192,15 +192,15 @@ end
 
 
 function DataMeans(gsm::GSMNonlinearBase, X)
-    LnΠ = ones(size(gsm.R))
+    mul!(gsm.Ψ, gsm.W, gsm.Φ')
+    Δ² = pairwise(sqeuclidean, gsm.Ψ, X', dims=2)
+    Δ² .*= -(1/(2*gsm.β⁻¹))
+
+    LnΠ = ones(size(Δ²))
     for n ∈ axes(LnΠ,2)
         LnΠ[:,n] .= log.(gsm.πk)
     end
 
-
-    mul!(gsm.Ψ, gsm.W, gsm.Φ')
-    Δ² = pairwise(sqeuclidean, gsm.Ψ, X', dims=2)
-    Δ² .*= -(1/(2*gsm.β⁻¹))
     R = softmax(Δ² .+ LnΠ, dims=1)
 
     return R'*gsm.Z
@@ -208,15 +208,15 @@ end
 
 
 function DataModes(gsm::GSMNonlinearBase, X)
-    LnΠ = ones(size(gsm.R))
+    mul!(gsm.Ψ, gsm.W, gsm.Φ')
+    Δ² = pairwise(sqeuclidean, gsm.Ψ, X', dims=2)
+    Δ² .*= -(1/(2*gsm.β⁻¹))
+
+    LnΠ = ones(size(Δ²))
     for n ∈ axes(LnΠ,2)
         LnΠ[:,n] .= log.(gsm.πk)
     end
 
-
-    mul!(gsm.Ψ, gsm.W, gsm.Φ')
-    Δ² = pairwise(sqeuclidean, gsm.Ψ, X', dims=2)
-    Δ² .*= -(1/(2*gsm.β⁻¹))
     R = softmax(Δ² .+ LnΠ, dims=1)
 
     idx = argmax(R, dims=1)
@@ -226,14 +226,15 @@ end
 
 
 function class_labels(gsm::GSMNonlinearBase, X)
-    LnΠ = ones(size(gsm.R))
+    mul!(gsm.Ψ, gsm.W, gsm.Φ')
+    Δ² = pairwise(sqeuclidean, gsm.Ψ, X', dims=2)
+    Δ² .*= -(1/(2*gsm.β⁻¹))
+
+    LnΠ = ones(size(Δ²))
     for n ∈ axes(LnΠ,2)
         LnΠ[:,n] .= log.(gsm.πk)
     end
 
-    mul!(gsm.Ψ, gsm.W, gsm.Φ')
-    Δ² = pairwise(sqeuclidean, gsm.Ψ, X', dims=2)
-    Δ² .*= -(1/(2*gsm.β⁻¹))
     R = softmax(Δ² .+ LnΠ, dims=1)
 
     idx = argmax(R, dims=1)
@@ -243,14 +244,16 @@ end
 
 
 function responsibility(gsm::GSMNonlinearBase, X)
-    LnΠ = ones(size(gsm.R))
+    mul!(gsm.Ψ, gsm.W, gsm.Φ')
+    Δ² = pairwise(sqeuclidean, gsm.Ψ, X', dims=2)
+    Δ² .*= -(1/(2*gsm.β⁻¹))
+
+    LnΠ = ones(size(Δ²))
     for n ∈ axes(LnΠ,2)
         LnΠ[:,n] .= log.(gsm.πk)
     end
 
-    mul!(gsm.Ψ, gsm.W, gsm.Φ')
-    Δ² = pairwise(sqeuclidean, gsm.Ψ, X', dims=2)
-    Δ² .*= -(1/(2*gsm.β⁻¹))
+
     R = softmax(Δ² .+ LnΠ, dims=1)
 
     return R'
