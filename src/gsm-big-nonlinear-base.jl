@@ -70,6 +70,6 @@ function GSMBigNonlinearBase(n_nodes, n_rbfs, Nᵥ, s, X; rand_init=true, rng=mk
 
 
     # 11. return final GSM object
-    return GSMNonlinearBase(Z, Φ, W, Ψ, zeros(n_nodes, n_records), R, β⁻¹, πk)
+    return GSMNonlinearBase(Z, M, s, Φ, W, Ψ, zeros(n_nodes, n_records), R, β⁻¹, πk)
 end
 

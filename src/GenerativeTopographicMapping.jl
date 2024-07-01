@@ -61,6 +61,7 @@ export GSMBigCombo
 export DataMeans, DataModes
 export responsibility
 export predict_responsibility
+export data_reconstruction
 
 
 

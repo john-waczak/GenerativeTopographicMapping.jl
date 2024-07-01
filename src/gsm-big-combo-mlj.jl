@@ -163,5 +163,27 @@ end
 
 
 
+function data_reconstruction(m::MLJBase.Machine{GSMBigCombo, GSMBigCombo, true}, Data_new)
+    Xnew = MLJModelInterface.matrix(Data_new)
+    gsm = fitted_params(m)[:gsm]
+
+    # compute means
+    zmeans = DataMeans(gsm, Xnew)
+
+    # compute new Φ
+    Φ = []
+
+    # add in linear terms
+    push!(Φ, zmeans)
+
+    let
+        Δ = pairwise(euclidean, zmeans, gsm.M, dims=1)
+        push!(Φ, linear_elem_big.(Δ, m.model.s))
+    end
+
+    Φ = hcat(Φ...)
+
+    return Φ * gsm.W'
+end
 
 

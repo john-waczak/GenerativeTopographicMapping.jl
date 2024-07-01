@@ -1,12 +1,13 @@
-mutable struct GSMComboBase{T1 <: AbstractArray, T2 <: AbstractArray, T3 <: AbstractArray, T4 <: AbstractArray, T5 <: AbstractArray, T6 <: AbstractArray, T7 <: AbstractArray}
+mutable struct GSMComboBase{T1 <: AbstractArray, T2 <: AbstractArray, T3 <: AbstractArray, T4 <: AbstractArray, T5 <: AbstractArray, T6 <: AbstractArray, T7 <: AbstractArray, T8 <: AbstractArray}
     Z::T1                 # Latent coordinates
-    Φ::T2                 # RBF activations
-    W::T3                 # RBF weights
-    Ψ::T4                 # projected node means
-    Δ²::T5                # Node-data distance matrix
-    R::T6                 # Responsibilities
+    M::T2                 # RBF coordinates
+    Φ::T3                 # RBF activations
+    W::T4                 # RBF weights
+    Ψ::T5                 # projected node means
+    Δ²::T6                # Node-data distance matrix
+    R::T7                 # Responsibilities
     β⁻¹::Float64           # precision
-    πk::T7
+    πk::T8
 end
 
 
@@ -97,7 +98,7 @@ function GSMComboBase(k, m, Nᵥ, X; rand_init=true, rng=mk_rng(123), zero_init=
     end
 
     # 11. return final GSM object
-    return GSMComboBase(Z, Φ, W, Ψ, zeros(n_nodes, n_records), R, β⁻¹, πk)
+    return GSMComboBase(Z, M, Φ, W, Ψ, zeros(n_nodes, n_records), R, β⁻¹, πk)
 end
 
 

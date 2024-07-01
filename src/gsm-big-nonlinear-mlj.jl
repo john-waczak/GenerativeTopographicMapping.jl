@@ -153,6 +153,31 @@ end
 
 
 
+function data_reconstruction(m::MLJBase.Machine{GSMBigNonlinear, GSMBigNonlinear, true}, Data_new)
+    Xnew = MLJModelInterface.matrix(Data_new)
+    gsm = fitted_params(m)[:gsm]
+
+    # compute means
+    zmeans = DataMeans(gsm, Xnew)
+
+    # compute new Φ
+    Δ² = pairwise(sqeuclidean, zmeans, gsm.M, dims=1)
+    Φ =  exp.(-Δ² ./ (2*gsm.σ^2))  # using gaussian RBF kernel
+
+    return Φ * gsm.W'
+end
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -139,6 +139,22 @@ function predict_responsibility(m::MLJBase.Machine{GSMBigLinear, GSMBigLinear, t
 end
 
 
+function data_reconstruction(m::MLJBase.Machine{GSMBigLinear, GSMBigLinear, true}, Data_new)
+    Xnew = MLJModelInterface.matrix(Data_new)
+    gsm = fitted_params(m)[:gsm]
+
+    # compute means
+    zmeans = DataMeans(gsm, Xnew)
+
+    # compute new Φ
+    Φ = zmeans
+
+    return Φ * gsm.W'
+end
+
+
+
+
 
 
 

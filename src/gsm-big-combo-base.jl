@@ -96,7 +96,7 @@ function GSMBigComboBase(n_nodes, n_rbfs, s, Nᵥ, X; rand_init=true, rng=mk_rng
     end
 
     # 11. return final GSM object
-    return GSMComboBase(Z, Φ, W, Ψ, zeros(n_nodes, n_records), R, β⁻¹, πk)
+    return GSMComboBase(Z, M, Φ, W, Ψ, zeros(n_nodes, n_records), R, β⁻¹, πk)
 end
 
 
