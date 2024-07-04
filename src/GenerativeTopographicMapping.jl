@@ -47,6 +47,17 @@ include("gsm-big-combo-base.jl")
 include("gsm-big-combo-mlj.jl")
 
 
+# GSMMultupLinear
+include("gsm-multup-linear-base.jl")
+include("gsm-multup-linear-mlj.jl")
+
+
+# GSMMultupNoninear
+include("gsm-multup-nonlinear-base.jl")
+include("gsm-multup-nonlinear-mlj.jl")
+
+
+
 export GTM
 
 export GSMLinear
@@ -57,6 +68,11 @@ export GSMBigNonlinear
 
 export GSMCombo
 export GSMBigCombo
+
+export GSMMultUpLinear
+export GSMMultUpNonlinear
+
+
 
 export DataMeans, DataModes
 export responsibility

@@ -436,3 +436,121 @@ end
     println(m.model)
 end
 
+
+
+
+
+@testset "gsm-multup-linear-base.jl" begin
+    # generate synthetic data
+    X = rand(rng, 100, 10)  # test data must be non-negative
+
+    k = 10
+    Nᵥ = 3
+
+    gsm = GenerativeTopographicMapping.GSMMultUpLinearBase(k, Nᵥ, X)
+    converged, Qs, llhs, AIC, BIC = GenerativeTopographicMapping.fit!(gsm, X, verbose=false)
+
+    @test all(gsm.W .≥ 0.0)
+
+    # Q1 = Qs[end]
+    # llh1 = llhs[end]
+
+    # gsm = GenerativeTopographicMapping.GSMLinearBase(k, Nᵥ, X)
+    # converged, Qs, llhs, AIC, BIC = GenerativeTopographicMapping.fit!(gsm, X, verbose=false)
+
+    # Q2 = Qs[end]
+    # llh2 = llhs[end]
+
+    # println(Q1, "\t", Q2)
+    # println(llh1, "\t", llh2)
+
+
+    # Z = gsm.Z
+    # @test size(Z,1) == binomial(k + Nᵥ - 2, Nᵥ -1)
+
+end
+
+
+
+
+@testset "gsm-multup-linear-mlj.jl" begin
+    Nᵥ = 3  # number of vertices
+    k = 10
+
+    # generate synthetic dataset for testing with 100 data points, 10 features, and 5 classes
+    X = Tables.table(rand(rng, 100,10))
+    N2 = 15
+    X2 = Tables.table(rand(rng, N2, 10))
+
+    model = GSMMultUpLinear(k=k, Nv=Nᵥ, nepochs=100, rand_init=false, rng=rng)
+    m = machine(model, X)
+    fit!(m, verbosity=0)
+
+    X̃ = MLJBase.transform(m, X2)
+    @test size(matrix(X̃)) == (N2, Nᵥ)
+
+    classes = MLJBase.predict(m, X2)
+    @test length(classes) == N2
+
+    Resp = predict_responsibility(m, X2)
+    @test all(isapprox.(sum(Resp, dims=2), 1.0))
+
+    fp = fitted_params(m)
+    @test Set([:gsm]) == Set(keys(fp))
+
+    @test all(fp[:gsm].W .≥ 0.0)
+
+    rpt = report(m)
+    @test Set([:W, :β⁻¹, :Φ, :node_data_means, :Z, :Q, :llhs, :converged, :AIC, :BIC, :idx_vertices]) == Set(keys(rpt))
+
+    @test size(rpt[:Φ], 2) == Nᵥ
+
+
+    # attempt the data reconstruction
+    X2_gsm = data_reconstruction(m, X2)
+    @test size(X2_gsm) == (N2, 10)
+
+end
+
+
+
+
+@testset "gsm-multup-nonlinear-mlj.jl" begin
+    Nᵥ = 3  # number of vertices
+    k = 10
+    m = 5
+    s = 1.0
+
+    # generate synthetic dataset for testing with 100 data points, 10 features, and 5 classes
+    X = Tables.table(rand(rng, 100,10))
+    N2 = 15
+    X2 = Tables.table(rand(rng, N2, 10))
+
+    model = GSMMultUpNonlinear(k=k, m=m, s=s, Nv=Nᵥ, nepochs=100, rand_init=false, rng=rng)
+    m = machine(model, X)
+    fit!(m, verbosity=0)
+
+    X̃ = MLJBase.transform(m, X2)
+    @test size(matrix(X̃)) == (N2, Nᵥ)
+
+    classes = MLJBase.predict(m, X2)
+    @test length(classes) == N2
+
+    Resp = predict_responsibility(m, X2)
+    @test all(isapprox.(sum(Resp, dims=2), 1.0))
+
+    fp = fitted_params(m)
+    @test Set([:gsm]) == Set(keys(fp))
+
+    @test all(fp[:gsm].W .≥ 0.0)
+
+    rpt = report(m)
+    @test Set([:W, :β⁻¹, :Φ, :node_data_means, :Z, :Q, :llhs, :converged, :AIC, :BIC, :idx_vertices]) == Set(keys(rpt))
+
+
+    # attempt the data reconstruction
+    X2_gsm = data_reconstruction(m, X2)
+    @test size(X2_gsm) == (N2, 10)
+
+end
+
