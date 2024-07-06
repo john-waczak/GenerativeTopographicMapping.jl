@@ -554,3 +554,82 @@ end
 
 end
 
+
+
+@testset "gsm-multup-big-linear-mlj.jl" begin
+    n_nodes = 100
+    Nv = 3
+
+    # generate synthetic dataset for testing with 100 data points, 10 features, and 5 classes
+    X = Tables.table(rand(rng, 100,10))
+    N2 = 15
+    X2 = Tables.table(rand(rng, N2, 10))
+
+
+    model = GSMMultUpBigLinear(n_nodes=n_nodes, Nv=Nv, nepochs=100, rand_init=false, rng=rng)
+    m = machine(model, X)
+    fit!(m, verbosity=0)
+
+    X̃ = MLJBase.transform(m, X2)
+    @test size(matrix(X̃)) == (N2, Nv)
+
+    classes = MLJBase.predict(m, X2)
+    @test length(classes) == N2
+
+    Resp = predict_responsibility(m, X2)
+    @test all(isapprox.(sum(Resp, dims=2), 1.0))
+
+    fp = fitted_params(m)
+    @test Set([:gsm]) == Set(keys(fp))
+
+    rpt = report(m)
+    @test Set([:W, :β⁻¹, :Φ, :node_data_means, :Z, :Q, :llhs, :converged, :AIC, :BIC, :idx_vertices]) == Set(keys(rpt))
+
+    # attempt the data reconstruction
+    X2_gsm = data_reconstruction(m, X2)
+    @test size(X2_gsm) == (N2, 10)
+
+end
+
+
+
+@testset "gsm-multup-big-nonlinear-mlj.jl" begin
+    n_nodes = 100
+    Nv = 3
+
+    # generate synthetic dataset for testing with 100 data points, 10 features, and 5 classes
+    X = Tables.table(rand(rng, 100,10))
+    N2 = 15
+    X2 = Tables.table(rand(rng, N2, 10))
+
+
+    model = GSMMultUpBigNonlinear(n_nodes=n_nodes, Nv=Nv, nepochs=100, rand_init=false, rng=rng)
+    m = machine(model, X)
+    fit!(m, verbosity=0)
+
+    X̃ = MLJBase.transform(m, X2)
+    @test size(matrix(X̃)) == (N2, Nv)
+
+    classes = MLJBase.predict(m, X2)
+    @test length(classes) == N2
+
+    Resp = predict_responsibility(m, X2)
+    @test all(isapprox.(sum(Resp, dims=2), 1.0))
+
+    fp = fitted_params(m)
+    @test Set([:gsm]) == Set(keys(fp))
+
+    rpt = report(m)
+    @test Set([:W, :β⁻¹, :Φ, :node_data_means, :Z, :Q, :llhs, :converged, :AIC, :BIC, :idx_vertices]) == Set(keys(rpt))
+
+    # attempt the data reconstruction
+    X2_gsm = data_reconstruction(m, X2)
+    @test size(X2_gsm) == (N2, 10)
+
+end
+
+
+
+
+
+

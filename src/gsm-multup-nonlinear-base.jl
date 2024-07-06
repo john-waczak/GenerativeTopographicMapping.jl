@@ -132,7 +132,7 @@ function fit!(gsm::GSMMultUpNonlinearBase, X; λ = 0.1, nepochs=100, tol=1e-3, n
         # 2. update weight matrix
         # gsm.W = ((gsm.Φ'*G*gsm.Φ + λ*gsm.β⁻¹*I)\(gsm.Φ'*gsm.R*X))'
         for step ∈ 1:n_steps
-            gsm.W .= gsm.W .* ( X' * gsm.R' * gsm.Φ ./ gsm.β⁻¹) ./ (gsm.W * gsm.Φ' * G * gsm.Φ ./ gsm.β⁻¹ + λ .* gsm.W)
+            gsm.W .*= (X' * gsm.R' * gsm.Φ ./ gsm.β⁻¹) ./ (gsm.W * gsm.Φ' * G * gsm.Φ ./ gsm.β⁻¹ + λ .* gsm.W)
         end
 
 
