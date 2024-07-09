@@ -5,19 +5,18 @@ mutable struct GSMBigCombo<: MLJModelInterface.Unsupervised
     Nv::Int
     λe::Float64
     λw::Float64
-    make_positive::Bool
     nepochs::Int
+    niters::Int
     tol::Float64
     nconverged::Int
-    rand_init::Bool
     rng::Any
     zero_init::Bool
 end
 
 
 
-function GSMBigCombo(; n_nodes=1000, n_rbfs=500, s=0.05, Nv=3, λe=0.01, λw=0.1, make_positive=false, nepochs=100, tol=1e-3, nconverged=4, rand_init=true, rng=123, zero_init=true)
-    model = GSMBigCombo(n_nodes, n_rbfs, s, Nv, λe, λw, make_positive, nepochs, tol, nconverged, rand_init, mk_rng(rng), zero_init)
+function GSMBigCombo(; n_nodes=1000, n_rbfs=500, s=0.05, Nv=3, λe=0.01, λw=0.1, nepochs=100, niters=100, tol=1e-3, nconverged=4, rng=123, zero_init=true)
+    model = GSMBigCombo(n_nodes, n_rbfs, s, Nv, λe, λw, nepochs, niters, tol, nconverged, mk_rng(rng), zero_init)
     message = MLJModelInterface.clean!(model)
     isempty(message) || @warn message
     return model
@@ -62,6 +61,11 @@ function MLJModelInterface.clean!(m::GSMBigCombo)
         m.nepochs = 100
     end
 
+    if m.niters ≤ 0
+        warning *= "Parameter `niters` expected to be positive, resetting to 100\n"
+        m.niters = 100
+    end
+
     if m.tol ≤ 0
         warning *= "Parameter `tol` expected to be positive, resetting to 1e-3\n"
         m.tol = 1e-3
@@ -89,7 +93,9 @@ function MLJModelInterface.fit(m::GSMBigCombo, verbosity, Datatable)
     end
 
     # 1. build the GTM
-    gsm = GSMBigComboBase(m.n_nodes, m.n_rbfs, m.s, m.Nv, X; rand_init=m.rand_init, rng=m.rng, zero_init=m.zero_init)
+    gsm = GSMBigComboBase(m.n_nodes, m.n_rbfs, m.s, m.Nv, X; rng=m.rng, zero_init=m.zero_init)
+
+    @assert all(gsm.W .≥ 0.0)
 
     # 2. Fit the GSM
     converged, Qs, llhs, AIC, BIC = fit!(
@@ -98,12 +104,13 @@ function MLJModelInterface.fit(m::GSMBigCombo, verbosity, Datatable)
         X,
         λe = m.λe,
         λw = m.λw,
-        nepochs=m.nepochs,
-        tol=m.tol,
-        nconverged=m.nconverged,
-        verbose=verbose,
-        make_positive=m.make_positive
+        nepochs = m.nepochs,
+        tol = m.tol,
+        nconverged = m.nconverged,
+        verbose = verbose,
+        n_steps = m.niters
     )
+
 
     # 3. Collect results
     cache = nothing

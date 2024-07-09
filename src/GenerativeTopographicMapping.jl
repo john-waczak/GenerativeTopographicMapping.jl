@@ -47,22 +47,22 @@ include("gsm-big-combo-base.jl")
 include("gsm-big-combo-mlj.jl")
 
 
-# GSMMultupLinear
-include("gsm-multup-linear-base.jl")
-include("gsm-multup-linear-mlj.jl")
+# # GSMMultupLinear
+# include("gsm-multup-linear-base.jl")
+# include("gsm-multup-linear-mlj.jl")
 
 
-# GSMMultupNoninear
-include("gsm-multup-nonlinear-base.jl")
-include("gsm-multup-nonlinear-mlj.jl")
+# # GSMMultupNoninear
+# include("gsm-multup-nonlinear-base.jl")
+# include("gsm-multup-nonlinear-mlj.jl")
 
-# GSMMultupBigLinear
-include("gsm-multup-big-linear-base.jl")
-include("gsm-multup-big-linear-mlj.jl")
+# # # GSMMultupBigLinear
+# include("gsm-multup-big-linear-base.jl")
+# include("gsm-multup-big-linear-mlj.jl")
 
-# GSMMultupBigNonlinear
-include("gsm-multup-big-nonlinear-base.jl")
-include("gsm-multup-big-nonlinear-mlj.jl")
+# # GSMMultupBigNonlinear
+# include("gsm-multup-big-nonlinear-base.jl")
+# include("gsm-multup-big-nonlinear-mlj.jl")
 
 
 
@@ -77,11 +77,12 @@ export GSMBigNonlinear
 export GSMCombo
 export GSMBigCombo
 
-export GSMMultUpLinear
-export GSMMultUpNonlinear
+# export GSMMultUpLinear
+# export GSMMultUpNonlinear
 
-export GSMMultUpBigLinear
-export GSMMultUpBigNonlinear
+# export GSMMultUpBigLinear
+# export GSMMultUpBigNonlinear
+
 
 export DataMeans, DataModes
 export responsibility
@@ -97,7 +98,7 @@ export data_reconstruction
 
 
 MLJModelInterface.metadata_pkg.(
-    [GTM, GSMLinear, GSMNonlinear, GSMBigLinear, GSMBigNonlinear, GSMCombo, GSMBigCombo, GSMMultUpLinear, GSMMultUpNonlinear, GSMMultUpBigLinear, GSMMultUpBigNonlinear],
+    [GTM, GSMLinear, GSMNonlinear, GSMBigLinear, GSMBigNonlinear, GSMCombo, GSMBigCombo],
     name = "GenerativeTopographicMapping",
     uuid = "110c1e60-17ba-4aeb-8cee-444277a6d160", # see your Project.toml
     url  = "https://github.com/john-waczak/GenerativeTopographicMapping.jl",
@@ -166,38 +167,38 @@ MLJModelInterface.metadata_model(
 
 
 
-MLJModelInterface.metadata_model(
-    GSMMultUpLinear,
-    input_scitype = MLJModelInterface.Table(MLJModelInterface.Continuous),
-    output_scitype  = MLJModelInterface.Table(MLJModelInterface.Continuous),
-    supports_weights = false,
-	  load_path    = "GenerativeTopographicMapping.GSMMultUpLinear"
-)
+# MLJModelInterface.metadata_model(
+#     GSMMultUpLinear,
+#     input_scitype = MLJModelInterface.Table(MLJModelInterface.Continuous),
+#     output_scitype  = MLJModelInterface.Table(MLJModelInterface.Continuous),
+#     supports_weights = false,
+# 	  load_path    = "GenerativeTopographicMapping.GSMMultUpLinear"
+# )
 
-MLJModelInterface.metadata_model(
-    GSMMultUpNonlinear,
-    input_scitype = MLJModelInterface.Table(MLJModelInterface.Continuous),
-    output_scitype  = MLJModelInterface.Table(MLJModelInterface.Continuous),
-    supports_weights = false,
-	  load_path    = "GenerativeTopographicMapping.GSMMultUpNonlinear"
-)
+# MLJModelInterface.metadata_model(
+#     GSMMultUpNonlinear,
+#     input_scitype = MLJModelInterface.Table(MLJModelInterface.Continuous),
+#     output_scitype  = MLJModelInterface.Table(MLJModelInterface.Continuous),
+#     supports_weights = false,
+# 	  load_path    = "GenerativeTopographicMapping.GSMMultUpNonlinear"
+# )
 
-MLJModelInterface.metadata_model(
-    GSMMultUpBigLinear,
-    input_scitype = MLJModelInterface.Table(MLJModelInterface.Continuous),
-    output_scitype  = MLJModelInterface.Table(MLJModelInterface.Continuous),
-    supports_weights = false,
-	  load_path    = "GenerativeTopographicMapping.GSMMultUpBigLinear"
-)
+# MLJModelInterface.metadata_model(
+#     GSMMultUpBigLinear,
+#     input_scitype = MLJModelInterface.Table(MLJModelInterface.Continuous),
+#     output_scitype  = MLJModelInterface.Table(MLJModelInterface.Continuous),
+#     supports_weights = false,
+# 	  load_path    = "GenerativeTopographicMapping.GSMMultUpBigLinear"
+# )
 
 
-MLJModelInterface.metadata_model(
-    GSMMultUpBigNonlinear,
-    input_scitype = MLJModelInterface.Table(MLJModelInterface.Continuous),
-    output_scitype  = MLJModelInterface.Table(MLJModelInterface.Continuous),
-    supports_weights = false,
-	  load_path    = "GenerativeTopographicMapping.GSMMultUpBigNonlinear"
-)
+# MLJModelInterface.metadata_model(
+#     GSMMultUpBigNonlinear,
+#     input_scitype = MLJModelInterface.Table(MLJModelInterface.Continuous),
+#     output_scitype  = MLJModelInterface.Table(MLJModelInterface.Continuous),
+#     supports_weights = false,
+# 	  load_path    = "GenerativeTopographicMapping.GSMMultUpBigNonlinear"
+# )
 
 
 

@@ -149,7 +149,7 @@ end
     N2 = 15
     X2 = Tables.table(rand(rng, N2, 10))
 
-    model = GSMLinear(k=Nₑ, Nv=Nᵥ, nepochs=100, rand_init=false, rng=rng)
+    model = GSMLinear(k=Nₑ, Nv=Nᵥ, nepochs=100, rng=rng)
     m = machine(model, X)
     fit!(m, verbosity=0)
 
@@ -170,20 +170,11 @@ end
 
     @test size(rpt[:Φ], 2) == Nᵥ
 
-
-    # run again with make_positive flag set to true
-    model = GSMLinear(k=Nₑ, Nv=Nᵥ, nepochs=100, make_positive=true, rand_init=true, rng=rng)
-    m = machine(model, X)
-    fit!(m, verbosity=0)
-
-    rpt = report(m)
-    W = rpt[:W]
-    @test all(W .≥ 0.0)
-
     # attempt the data reconstruction
-    X_gsm = data_reconstruction(m, X)
-    @test size(X_gsm) == (100, 10)
+    X_gsm = data_reconstruction(m, X2)
+    @test size(X_gsm) == (N2, 10)
 
+    @test all(rpt[:W] .≥ 0.0)
 end
 
 
@@ -214,7 +205,7 @@ end
     N2 = 15
     X2 = Tables.table(rand(rng, N2, 10))
 
-    model = GSMNonlinear(k=Nₑ, m=m, Nv=Nᵥ, nepochs=100, rand_init=false, rng=rng)
+    model = GSMNonlinear(k=Nₑ, m=m, Nv=Nᵥ, nepochs=100, rng=rng)
     mach = machine(model, X)
     fit!(mach, verbosity=0)
 
@@ -233,18 +224,51 @@ end
     rpt = report(mach)
     @test Set([:W, :β⁻¹, :Φ, :node_data_means, :Z, :Q, :llhs, :converged, :AIC, :BIC, :idx_vertices]) == Set(keys(rpt))
 
-    # run again with make_positive flag set to true
-    model = GSMNonlinear(k=Nₑ, m=m, Nv=Nᵥ, nepochs=100, make_positive=true, rand_init=true, rng=rng)
+    # attempt the data reconstruction
+    X_gsm = data_reconstruction(mach, X2)
+    @test size(X_gsm) == (N2, 10)
+
+
+    @test all(rpt[:W] .≥ 0.0)
+end
+
+
+@testset "gsm-combo-mlj.jl" begin
+    k = 10
+    m = 5
+    Nv = 3
+
+    # generate synthetic dataset for testing with 100 data points, 10 features, and 5 classes
+    X = Tables.table(rand(rng, 100,10))
+    N2 = 15
+    X2 = Tables.table(rand(rng, N2, 10))
+
+    model = GSMCombo(k=k, m=m, Nv=Nv, nepochs=100, rng=rng, zero_init=false)
     mach = machine(model, X)
     fit!(mach, verbosity=0)
 
+    X̃ = MLJBase.transform(mach, X2)
+    @test size(matrix(X̃)) == (N2, Nv)
+
+    classes = MLJBase.predict(mach, X2)
+    @test length(classes) == N2
+
+    Resp = predict_responsibility(mach, X2)
+    @test all(isapprox.(sum(Resp, dims=2), 1.0))
+
+    fp = fitted_params(mach)
+    @test Set([:gsm]) == Set(keys(fp))
+
     rpt = report(mach)
-    W = rpt[:W]
-    @test all(W .≥ 0.0)
+    @test Set([:W, :β⁻¹, :Φ, :node_data_means, :Z, :Q, :llhs, :converged, :AIC, :BIC, :idx_vertices]) == Set(keys(rpt))
 
     # attempt the data reconstruction
-    X_gsm = data_reconstruction(mach, X)
-    @test size(X_gsm) == (100, 10)
+    X_gsm = data_reconstruction(mach, X2)
+    @test size(X_gsm) == (N2, 10)
+
+
+    @test all(rpt[:W] .≥ 0.0)
+
 end
 
 
@@ -259,7 +283,7 @@ end
     X2 = Tables.table(rand(rng, N2, 10))
 
 
-    model = GSMBigLinear(n_nodes=n_nodes, Nv=Nv, nepochs=100, rand_init=false, rng=rng)
+    model = GSMBigLinear(n_nodes=n_nodes, Nv=Nv, nepochs=100, rng=rng)
     m = machine(model, X)
     fit!(m, verbosity=0)
 
@@ -278,19 +302,11 @@ end
     rpt = report(m)
     @test Set([:W, :β⁻¹, :Φ, :node_data_means, :Z, :Q, :llhs, :converged, :AIC, :BIC, :idx_vertices]) == Set(keys(rpt))
 
-    # run again with make_positive flag set to true
-    model = GSMBigLinear(n_nodes=n_nodes, Nv=Nv, nepochs=100, make_positive=true, rand_init=true, rng=rng)
-    m = machine(model, X)
-    fit!(m, verbosity=0)
-
-    rpt = report(m)
-    W = rpt[:W]
-    @test all(W .≥ 0.0)
-
     # attempt the data reconstruction
-    X_gsm = data_reconstruction(m, X)
-    @test size(X_gsm) == (100, 10)
+    X_gsm = data_reconstruction(m, X2)
+    @test size(X_gsm) == (N2, 10)
 
+    @test all(rpt[:W] .≥ 0.0)
 end
 
 
@@ -307,7 +323,7 @@ end
     X2 = Tables.table(rand(rng, N2, 10))
 
 
-    model = GSMBigNonlinear(n_nodes=n_nodes, n_rbfs=n_rbfs, Nv=Nv, nepochs=100, rand_init=false, rng=rng)
+    model = GSMBigNonlinear(n_nodes=n_nodes, n_rbfs=n_rbfs, Nv=Nv, nepochs=100, rng=rng)
     m = machine(model, X)
     fit!(m, verbosity=0)
 
@@ -326,24 +342,17 @@ end
     rpt = report(m)
     @test Set([:W, :β⁻¹, :Φ, :node_data_means, :Z, :Q, :llhs, :converged, :AIC, :BIC, :idx_vertices]) == Set(keys(rpt))
 
-    # run again with make_positive flag set to true
-    model = GSMBigNonlinear(n_nodes=n_nodes, n_rbfs=n_rbfs, Nv=Nv, nepochs=100, make_positive=true, rand_init=true, rng=rng)
-    m = machine(model, X)
-    fit!(m, verbosity=0)
-
-    rpt = report(m)
-    W = rpt[:W]
-    @test all(W .≥ 0.0)
-
     # attempt the data reconstruction
-    X_gsm = data_reconstruction(m, X)
-    @test size(X_gsm) == (100, 10)
+    X_gsm = data_reconstruction(m, X2)
+    @test size(X_gsm) == (N2, 10)
 
+    @test all(rpt[:W] .≥ 0.0)
 end
 
 
 
-@testset "gsm-combo-mlj.jl" begin
+
+@testset "gsm-big-combo-mlj.jl" begin
     k = 10
     m = 5
     Nv = 3
@@ -353,7 +362,8 @@ end
     N2 = 15
     X2 = Tables.table(rand(rng, N2, 10))
 
-    model = GSMCombo(k=k, m=m, Nv=Nv, nepochs=100, rand_init=true, rng=rng, zero_init=true)
+    model = GSMBigCombo(n_nodes=k, n_rbfs=m, Nv=Nv, nepochs=100, rng=rng, zero_init=false)
+
     mach = machine(model, X)
     fit!(mach, verbosity=0)
 
@@ -372,264 +382,13 @@ end
     rpt = report(mach)
     @test Set([:W, :β⁻¹, :Φ, :node_data_means, :Z, :Q, :llhs, :converged, :AIC, :BIC, :idx_vertices]) == Set(keys(rpt))
 
-    # run again with make_positive flag set to true
-    model = GSMCombo(k=k, m=m, Nv=Nv, nepochs=100, make_positive=true, rand_init=true, rng=rng, zero_init=false)
-    mach = machine(model, X)
-    fit!(mach, verbosity=0)
-
-    rpt = report(mach)
-    W = rpt[:W]
-    @test all(W .≥ 0.0)
-
     # attempt the data reconstruction
-    X_gsm = data_reconstruction(mach, X)
-    @test size(X_gsm) == (100, 10)
+    X_gsm = data_reconstruction(mach, X2)
+    @test size(X_gsm) == (N2, 10)
 
+
+    @test all(rpt[:W] .≥ 0.0)
 end
-
-
-
-@testset "gsm-big-combo-mlj.jl" begin
-    n_nodes = 100
-    n_rbfs = 20
-    Nv = 3
-
-    # generate synthetic dataset for testing with 100 data points, 10 features, and 5 classes
-    X = Tables.table(rand(rng, 100,10))
-    N2 = 15
-    X2 = Tables.table(rand(rng, N2, 10))
-
-
-    model = GSMBigCombo(n_nodes=n_nodes, n_rbfs=n_rbfs, Nv=Nv, nepochs=100, rand_init=false, rng=rng, zero_init=false)
-    m = machine(model, X)
-
-    fit!(m, verbosity=0)
-
-    X̃ = MLJBase.transform(m, X2)
-    @test size(matrix(X̃)) == (N2, Nv)
-
-    classes = MLJBase.predict(m, X2)
-    @test length(classes) == N2
-
-    Resp = predict_responsibility(m, X2)
-    @test all(isapprox.(sum(Resp, dims=2), 1.0))
-
-    fp = fitted_params(m)
-    @test Set([:gsm]) == Set(keys(fp))
-
-    rpt = report(m)
-    @test Set([:W, :β⁻¹, :Φ, :node_data_means, :Z, :Q, :llhs, :converged, :AIC, :BIC, :idx_vertices]) == Set(keys(rpt))
-
-    # run again with make_positive flag set to true
-    model = GSMBigCombo(n_nodes=n_nodes, n_rbfs=n_rbfs, Nv=Nv, nepochs=100, make_positive=true, rand_init=true, rng=rng, zero_init=true)
-    m = machine(model, X)
-    fit!(m, verbosity=0)
-
-    rpt = report(m)
-    W = rpt[:W]
-    @test all(W .≥ 0.0)
-
-    # attempt the data reconstruction
-    X_gsm = data_reconstruction(m, X)
-    @test size(X_gsm) == (100, 10)
-
-    println(m.model)
-end
-
-
-
-
-
-@testset "gsm-multup-linear-base.jl" begin
-    # generate synthetic data
-    X = rand(rng, 100, 10)  # test data must be non-negative
-
-    k = 10
-    Nᵥ = 3
-
-    gsm = GenerativeTopographicMapping.GSMMultUpLinearBase(k, Nᵥ, X)
-    converged, Qs, llhs, AIC, BIC = GenerativeTopographicMapping.fit!(gsm, X, verbose=false)
-
-    @test all(gsm.W .≥ 0.0)
-
-    # Q1 = Qs[end]
-    # llh1 = llhs[end]
-
-    # gsm = GenerativeTopographicMapping.GSMLinearBase(k, Nᵥ, X)
-    # converged, Qs, llhs, AIC, BIC = GenerativeTopographicMapping.fit!(gsm, X, verbose=false)
-
-    # Q2 = Qs[end]
-    # llh2 = llhs[end]
-
-    # println(Q1, "\t", Q2)
-    # println(llh1, "\t", llh2)
-
-
-    # Z = gsm.Z
-    # @test size(Z,1) == binomial(k + Nᵥ - 2, Nᵥ -1)
-
-end
-
-
-
-
-@testset "gsm-multup-linear-mlj.jl" begin
-    Nᵥ = 3  # number of vertices
-    k = 10
-
-    # generate synthetic dataset for testing with 100 data points, 10 features, and 5 classes
-    X = Tables.table(rand(rng, 100,10))
-    N2 = 15
-    X2 = Tables.table(rand(rng, N2, 10))
-
-    model = GSMMultUpLinear(k=k, Nv=Nᵥ, nepochs=100, rand_init=false, rng=rng)
-    m = machine(model, X)
-    fit!(m, verbosity=0)
-
-    X̃ = MLJBase.transform(m, X2)
-    @test size(matrix(X̃)) == (N2, Nᵥ)
-
-    classes = MLJBase.predict(m, X2)
-    @test length(classes) == N2
-
-    Resp = predict_responsibility(m, X2)
-    @test all(isapprox.(sum(Resp, dims=2), 1.0))
-
-    fp = fitted_params(m)
-    @test Set([:gsm]) == Set(keys(fp))
-
-    @test all(fp[:gsm].W .≥ 0.0)
-
-    rpt = report(m)
-    @test Set([:W, :β⁻¹, :Φ, :node_data_means, :Z, :Q, :llhs, :converged, :AIC, :BIC, :idx_vertices]) == Set(keys(rpt))
-
-    @test size(rpt[:Φ], 2) == Nᵥ
-
-
-    # attempt the data reconstruction
-    X2_gsm = data_reconstruction(m, X2)
-    @test size(X2_gsm) == (N2, 10)
-
-end
-
-
-
-
-@testset "gsm-multup-nonlinear-mlj.jl" begin
-    Nᵥ = 3  # number of vertices
-    k = 10
-    m = 5
-    s = 1.0
-
-    # generate synthetic dataset for testing with 100 data points, 10 features, and 5 classes
-    X = Tables.table(rand(rng, 100,10))
-    N2 = 15
-    X2 = Tables.table(rand(rng, N2, 10))
-
-    model = GSMMultUpNonlinear(k=k, m=m, s=s, Nv=Nᵥ, nepochs=100, rand_init=false, rng=rng)
-    m = machine(model, X)
-    fit!(m, verbosity=0)
-
-    X̃ = MLJBase.transform(m, X2)
-    @test size(matrix(X̃)) == (N2, Nᵥ)
-
-    classes = MLJBase.predict(m, X2)
-    @test length(classes) == N2
-
-    Resp = predict_responsibility(m, X2)
-    @test all(isapprox.(sum(Resp, dims=2), 1.0))
-
-    fp = fitted_params(m)
-    @test Set([:gsm]) == Set(keys(fp))
-
-    @test all(fp[:gsm].W .≥ 0.0)
-
-    rpt = report(m)
-    @test Set([:W, :β⁻¹, :Φ, :node_data_means, :Z, :Q, :llhs, :converged, :AIC, :BIC, :idx_vertices]) == Set(keys(rpt))
-
-
-    # attempt the data reconstruction
-    X2_gsm = data_reconstruction(m, X2)
-    @test size(X2_gsm) == (N2, 10)
-
-end
-
-
-
-@testset "gsm-multup-big-linear-mlj.jl" begin
-    n_nodes = 100
-    Nv = 3
-
-    # generate synthetic dataset for testing with 100 data points, 10 features, and 5 classes
-    X = Tables.table(rand(rng, 100,10))
-    N2 = 15
-    X2 = Tables.table(rand(rng, N2, 10))
-
-
-    model = GSMMultUpBigLinear(n_nodes=n_nodes, Nv=Nv, nepochs=100, rand_init=false, rng=rng)
-    m = machine(model, X)
-    fit!(m, verbosity=0)
-
-    X̃ = MLJBase.transform(m, X2)
-    @test size(matrix(X̃)) == (N2, Nv)
-
-    classes = MLJBase.predict(m, X2)
-    @test length(classes) == N2
-
-    Resp = predict_responsibility(m, X2)
-    @test all(isapprox.(sum(Resp, dims=2), 1.0))
-
-    fp = fitted_params(m)
-    @test Set([:gsm]) == Set(keys(fp))
-
-    rpt = report(m)
-    @test Set([:W, :β⁻¹, :Φ, :node_data_means, :Z, :Q, :llhs, :converged, :AIC, :BIC, :idx_vertices]) == Set(keys(rpt))
-
-    # attempt the data reconstruction
-    X2_gsm = data_reconstruction(m, X2)
-    @test size(X2_gsm) == (N2, 10)
-
-end
-
-
-
-@testset "gsm-multup-big-nonlinear-mlj.jl" begin
-    n_nodes = 100
-    Nv = 3
-
-    # generate synthetic dataset for testing with 100 data points, 10 features, and 5 classes
-    X = Tables.table(rand(rng, 100,10))
-    N2 = 15
-    X2 = Tables.table(rand(rng, N2, 10))
-
-
-    model = GSMMultUpBigNonlinear(n_nodes=n_nodes, Nv=Nv, nepochs=100, rand_init=false, rng=rng)
-    m = machine(model, X)
-    fit!(m, verbosity=0)
-
-    X̃ = MLJBase.transform(m, X2)
-    @test size(matrix(X̃)) == (N2, Nv)
-
-    classes = MLJBase.predict(m, X2)
-    @test length(classes) == N2
-
-    Resp = predict_responsibility(m, X2)
-    @test all(isapprox.(sum(Resp, dims=2), 1.0))
-
-    fp = fitted_params(m)
-    @test Set([:gsm]) == Set(keys(fp))
-
-    rpt = report(m)
-    @test Set([:W, :β⁻¹, :Φ, :node_data_means, :Z, :Q, :llhs, :converged, :AIC, :BIC, :idx_vertices]) == Set(keys(rpt))
-
-    # attempt the data reconstruction
-    X2_gsm = data_reconstruction(m, X2)
-    @test size(X2_gsm) == (N2, 10)
-
-end
-
-
-
 
 
 

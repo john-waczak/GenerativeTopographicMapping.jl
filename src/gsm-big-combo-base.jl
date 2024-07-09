@@ -1,4 +1,4 @@
-function GSMBigComboBase(n_nodes, n_rbfs, s, Nᵥ, X; rand_init=true, rng=mk_rng(123), zero_init=true)
+function GSMBigComboBase(n_nodes, n_rbfs, s, Nᵥ, X; rng=mk_rng(123), zero_init=true)
     # 1. define grid parameters
     n_records, n_features = size(X)
 
@@ -52,36 +52,11 @@ function GSMBigComboBase(n_nodes, n_rbfs, s, Nᵥ, X; rand_init=true, rng=mk_rng
     W = rand(rng, n_features, size(Φ, 2))
     if zero_init
         # optionally zero out the nonlinear terms
-        W[:, Nᵥ+1:end] .= 0.0
-    end
-
-    if !(rand_init)
-        # convert to loadings
-        for i ∈ 1:Nᵥ
-            U[:,i] .= U[:,i] .* sqrt(pca_vars[i])
-        end
-
-        Znorm = copy(Z)
-        for i ∈ 1:Nᵥ
-            Znorm[:,i] = (Znorm[:,i] .-  mean(Znorm[:,i])) ./ std(Znorm[:,i])
-        end
-
-        if zero_init
-            W[:, 1:Nᵥ] = U*Znorm' * pinv(Φ[:,1:Nᵥ]')
-        else
-            W = U*Znorm' * pinv(Φ')
-        end
+        W[:, Nᵥ+1:end] .= eps(1.0)
     end
 
     # 7. Initialize data manifold Ψ using W and Φ
     Ψ = W * Φ'
-
-    # add back the means if using PCA
-    if !(rand_init)
-        for i ∈ axes(Ψ,1)
-            Ψ[i,:] .= Ψ[i,:] .+ data_means[i]
-        end
-    end
 
     # 8. Set the variance parameter
     β⁻¹ = max(pca_vars[Nᵥ+1], mean(pairwise(sqeuclidean, Ψ, dims=2))/2)

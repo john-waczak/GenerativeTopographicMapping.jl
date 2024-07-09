@@ -12,7 +12,7 @@ end
 
 
 
-function GSMLinearBase(k, Nᵥ, X; rand_init=true, rng=mk_rng(123))
+function GSMLinearBase(k, Nᵥ, X; rng=mk_rng(123))
     # 1. define grid parameters
     n_records, n_features = size(X)
     n_nodes = binomial(k + Nᵥ - 2, Nᵥ - 1)
@@ -34,29 +34,8 @@ function GSMLinearBase(k, Nᵥ, X; rand_init=true, rng=mk_rng(123))
     # 4. Initialize weights
     W = rand(rng, n_features, size(Φ, 2))
 
-    if !(rand_init)
-        # convert to loadings
-        for i ∈ 1:Nᵥ
-            U[:,i] .= U[:,i] .* sqrt(pca_vars[i])
-        end
-
-        Znorm = copy(Z)
-        for i ∈ 1:Nᵥ
-            Znorm[:,i] = (Znorm[:,i] .-  mean(Znorm[:,i])) ./ std(Znorm[:,i])
-        end
-
-        W = U*Znorm' * pinv(Φ')
-    end
-
     # 5. Initialize data manifold Ψ using W and Φ
     Ψ = W * Φ'
-
-    # add back the means if using PCA
-    if !(rand_init)
-        for i ∈ axes(Ψ,1)
-            Ψ[i,:] .= Ψ[i,:] .+ data_means[i]
-        end
-    end
 
     # 6. Set the variance parameter
     β⁻¹ = max(pca_vars[Nᵥ+1], mean(pairwise(sqeuclidean, Ψ, dims=2))/2)
@@ -78,7 +57,7 @@ end
 
 
 
-function fit!(gsm::GSMLinearBase, X; λ = 0.1, nepochs=100, tol=1e-3, nconverged=5, verbose=false, make_positive=false)
+function fit!(gsm::GSMLinearBase, X; λ = 0.1, nepochs=100, tol=1e-3, nconverged=5, verbose=false, n_steps=100)
     # get the needed dimensions
     N,D = size(X)
     K = size(gsm.Z,1)
@@ -121,11 +100,9 @@ function fit!(gsm::GSMLinearBase, X; λ = 0.1, nepochs=100, tol=1e-3, nconverged
         end
 
         # 2. update weight matrix
-        gsm.W = ((gsm.Φ'*G*gsm.Φ + λ*gsm.β⁻¹*I)\(gsm.Φ'*gsm.R*X))'
-
-        # if desired, force weights to be positive.
-        if make_positive
-            gsm.W = max.(gsm.W, 0.0)
+        # gsm.W = ((gsm.Φ'*G*gsm.Φ + λ*gsm.β⁻¹*I)\(gsm.Φ'*gsm.R*X))'
+        for step ∈ 1:n_steps
+            gsm.W .*= max.(( X' * gsm.R' * gsm.Φ ./ gsm.β⁻¹), 0.0) ./ max.((gsm.W * gsm.Φ' * G * gsm.Φ ./ gsm.β⁻¹ + λ .* gsm.W), eps(eltype(gsm.W)))
         end
 
         # 3. update precision β

@@ -13,7 +13,7 @@ end
 
 
 
-function GSMComboBase(k, m, Nᵥ, X; rand_init=true, rng=mk_rng(123), zero_init=true)
+function GSMComboBase(k, m, Nᵥ, X; rng=mk_rng(123), zero_init=true)
     # 1. define grid parameters
     n_records, n_features = size(X)
     n_nodes = binomial(k + Nᵥ - 2, Nᵥ - 1)
@@ -54,36 +54,11 @@ function GSMComboBase(k, m, Nᵥ, X; rand_init=true, rng=mk_rng(123), zero_init=
     W = rand(rng, n_features, size(Φ, 2))
     if zero_init
         # optionally zero out the nonlinear terms
-        W[:, Nᵥ+1:end] .= 0.0
-    end
-
-    if !(rand_init)
-        # convert to loadings
-        for i ∈ 1:Nᵥ
-            U[:,i] .= U[:,i] .* sqrt(pca_vars[i])
-        end
-
-        Znorm = copy(Z)
-        for i ∈ 1:Nᵥ
-            Znorm[:,i] = (Znorm[:,i] .-  mean(Znorm[:,i])) ./ std(Znorm[:,i])
-        end
-
-        if zero_init
-            W[:, 1:Nᵥ] = U*Znorm' * pinv(Φ[:,1:Nᵥ]')
-        else
-            W = U*Znorm' * pinv(Φ')
-        end
+        W[:, Nᵥ+1:end] .= eps(eltype(W))
     end
 
     # 7. Initialize data manifold Ψ using W and Φ
     Ψ = W * Φ'
-
-    # add back the means if using PCA
-    if !(rand_init)
-        for i ∈ axes(Ψ,1)
-            Ψ[i,:] .= Ψ[i,:] .+ data_means[i]
-        end
-    end
 
     # 8. Set the variance parameter
     β⁻¹ = max(pca_vars[Nᵥ+1], mean(pairwise(sqeuclidean, Ψ, dims=2))/2)
@@ -105,7 +80,7 @@ end
 
 
 
-function fit!(gsm::GSMComboBase, Nv, X; λe = 0.01, λw=0.1, nepochs=100, tol=1e-3, nconverged=5, verbose=false, make_positive=false)
+function fit!(gsm::GSMComboBase, Nv, X; λe = 0.01, λw=0.1, nepochs=100, tol=1e-3, nconverged=5, verbose=false, n_steps =100)
     # get the needed dimensions
     N,D = size(X)
 
@@ -132,7 +107,12 @@ function fit!(gsm::GSMComboBase, Nv, X; λe = 0.01, λw=0.1, nepochs=100, tol=1e
     nclose = 0
     converged = false
 
+
+    @assert all(gsm.W .≥ 0.0)
+
     for i in 1:nepochs
+        @assert all(gsm.W .≥ 0.0)
+
         # EXPECTATION
         mul!(gsm.Ψ, gsm.W, gsm.Φ')                             # update latent node means
         pairwise!(sqeuclidean, gsm.Δ², gsm.Ψ, X', dims=2)    # update distance matrix
@@ -150,20 +130,21 @@ function fit!(gsm::GSMComboBase, Nv, X; λe = 0.01, λw=0.1, nepochs=100, tol=1e
             LnΠ[:,n] .= log.(gsm.πk)
         end
 
-        # 2. update weight matrix
-        # gsm.W = ((gsm.Φ'*G*gsm.Φ + λ*gsm.β⁻¹*I)\(gsm.Φ'*gsm.R*X))'
-        gsm.W = ((gsm.Φ'*G*gsm.Φ + gsm.β⁻¹*Λ)\(gsm.Φ'*gsm.R*X))'
 
-        # if desired, force weights to be positive.
-        if make_positive
-            gsm.W = max.(gsm.W, 0.0)
+        # 2. update weight matrix
+        # gsm.W = ((gsm.Φ'*G*gsm.Φ + gsm.β⁻¹*Λ)\(gsm.Φ'*gsm.R*X))'
+
+        for step ∈ 1:n_steps
+            gsm.W .*= max.((X' * gsm.R' * gsm.Φ ./ gsm.β⁻¹), 0.0) ./ max.((gsm.W * gsm.Φ' * G * gsm.Φ ./ gsm.β⁻¹ + (gsm.W * Λ)), eps(eltype(gsm.W)))
         end
+
+
+        @assert all(gsm.W .≥ 0.0)
 
         # 3. update precision β
         mul!(gsm.Ψ, gsm.W, gsm.Φ')                         # update means
         pairwise!(sqeuclidean, gsm.Δ², gsm.Ψ, X', dims=2)  # update distance matrix
-        gsm.β⁻¹ = sum(gsm.R .* gsm.Δ²)/(N*D)                    # update variance
-
+        gsm.β⁻¹ = sum(gsm.R .* gsm.Δ²)/(N*D)                # update variance
 
         # UPDATE LOG-LIKELIHOOD
         prefac = (N*D/2)*log(1/(2* gsm.β⁻¹* π))

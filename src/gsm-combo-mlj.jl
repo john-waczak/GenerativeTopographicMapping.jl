@@ -4,19 +4,18 @@ mutable struct GSMCombo<: MLJModelInterface.Unsupervised
     Nv::Int
     λe::Float64
     λw::Float64
-    make_positive::Bool
     nepochs::Int
+    niters::Int
     tol::Float64
     nconverged::Int
-    rand_init::Bool
     rng::Any
     zero_init::Bool
 end
 
 
 
-function GSMCombo(; k=10, m=5, Nv=3, λe=0.01, λw=0.1, make_positive=false, nepochs=100, tol=1e-3, nconverged=4, rand_init=true, rng=123, zero_init=true)
-    model = GSMCombo(k, m, Nv, λe, λw, make_positive, nepochs, tol, nconverged, rand_init, mk_rng(rng), zero_init)
+function GSMCombo(; k=10, m=5, Nv=3, λe=0.01, λw=0.1, nepochs=100, niters=100, tol=1e-3, nconverged=4, rng=123, zero_init=true)
+    model = GSMCombo(k, m, Nv, λe, λw, nepochs, niters, tol, nconverged, mk_rng(rng), zero_init)
     message = MLJModelInterface.clean!(model)
     isempty(message) || @warn message
     return model
@@ -56,6 +55,11 @@ function MLJModelInterface.clean!(m::GSMCombo)
         m.nepochs = 100
     end
 
+    if m.niters ≤ 0
+        warning *= "Parameter `niters` expected to be positive, resetting to 100\n"
+        m.niters = 100
+    end
+
     if m.tol ≤ 0
         warning *= "Parameter `tol` expected to be positive, resetting to 1e-3\n"
         m.tol = 1e-3
@@ -83,7 +87,7 @@ function MLJModelInterface.fit(m::GSMCombo, verbosity, Datatable)
     end
 
     # 1. build the GTM
-    gsm = GSMComboBase(m.k, m.m, m.Nv, X; rand_init=m.rand_init, rng=m.rng, zero_init=m.zero_init)
+    gsm = GSMComboBase(m.k, m.m, m.Nv, X; rng=m.rng, zero_init=m.zero_init)
 
     # 2. Fit the GSM
     converged, Qs, llhs, AIC, BIC = fit!(
@@ -92,11 +96,11 @@ function MLJModelInterface.fit(m::GSMCombo, verbosity, Datatable)
         X,
         λe = m.λe,
         λw = m.λw,
-        nepochs=m.nepochs,
-        tol=m.tol,
-        nconverged=m.nconverged,
-        verbose=verbose,
-        make_positive=m.make_positive
+        nepochs = m.nepochs,
+        tol = m.tol,
+        nconverged = m.nconverged,
+        verbose = verbose,
+        n_steps = m.niters
     )
 
     # 3. Collect results
