@@ -1,4 +1,4 @@
-function GSMBigComboBase(n_nodes, n_rbfs, s, Nᵥ, X; rng=mk_rng(123), zero_init=true)
+function GSMBigComboBase(n_nodes, n_rbfs, s, Nᵥ, X; rng=mk_rng(123))
     # 1. define grid parameters
     n_records, n_features = size(X)
 
@@ -50,10 +50,6 @@ function GSMBigComboBase(n_nodes, n_rbfs, s, Nᵥ, X; rng=mk_rng(123), zero_init
 
     # 6. Initialize weights
     W = rand(rng, n_features, size(Φ, 2))
-    if zero_init
-        # optionally zero out the nonlinear terms
-        W[:, Nᵥ+1:end] .= eps(1.0)
-    end
 
     # 7. Initialize data manifold Ψ using W and Φ
     Ψ = W * Φ'

@@ -13,7 +13,7 @@ end
 
 
 
-function GSMComboBase(k, m, Nᵥ, X; rng=mk_rng(123), zero_init=true)
+function GSMComboBase(k, m, Nᵥ, X; rng=mk_rng(123))
     # 1. define grid parameters
     n_records, n_features = size(X)
     n_nodes = binomial(k + Nᵥ - 2, Nᵥ - 1)
@@ -52,10 +52,6 @@ function GSMComboBase(k, m, Nᵥ, X; rng=mk_rng(123), zero_init=true)
 
     # 6. Initialize weights
     W = rand(rng, n_features, size(Φ, 2))
-    if zero_init
-        # optionally zero out the nonlinear terms
-        W[:, Nᵥ+1:end] .= eps(eltype(W))
-    end
 
     # 7. Initialize data manifold Ψ using W and Φ
     Ψ = W * Φ'
@@ -108,6 +104,15 @@ function fit!(gsm::GSMComboBase, Nv, X; λe = 0.01, λw=0.1, nepochs=100, tol=1e
     converged = false
 
 
+    # preallocate matrices
+    Numer = zeros(size(gsm.W))
+    Denom = zeros(size(gsm.W))
+
+    XtRt = X'*gsm.R'
+    WΦt = gsm.W*gsm.Φ'
+    GΦ = G*gsm.Φ
+    WΛ = gsm.W*Λ
+
     @assert all(gsm.W .≥ 0.0)
 
     for i in 1:nepochs
@@ -135,7 +140,23 @@ function fit!(gsm::GSMComboBase, Nv, X; λe = 0.01, λw=0.1, nepochs=100, tol=1e
         # gsm.W = ((gsm.Φ'*G*gsm.Φ + gsm.β⁻¹*Λ)\(gsm.Φ'*gsm.R*X))'
 
         for step ∈ 1:n_steps
-            gsm.W .*= max.((X' * gsm.R' * gsm.Φ ./ gsm.β⁻¹), 0.0) ./ max.((gsm.W * gsm.Φ' * G * gsm.Φ ./ gsm.β⁻¹ + (gsm.W * Λ)), eps(eltype(gsm.W)))
+            # gsm.W .*= max.((X' * gsm.R' * gsm.Φ ./ gsm.β⁻¹), 0.0) ./ max.((gsm.W * gsm.Φ' * G * gsm.Φ ./ gsm.β⁻¹ + (gsm.W * Λ)), eps(eltype(gsm.W)))
+
+            # update numerator
+            mul!(XtRt, X', gsm.R')
+            mul!(Numer, XtRt, gsm.Φ)
+            Numer ./= gsm.β⁻¹
+
+            # update denominator
+            mul!(WΦt, gsm.W, gsm.Φ')
+            mul!(GΦ, G, gsm.Φ)
+            mul!(WΛ, gsm.W, Λ)
+            mul!(Denom, WΦt, GΦ)
+            Denom ./= gsm.β⁻¹
+            Denom .+= WΛ
+
+            # update weights
+            gsm.W .*= max.(Numer, 0.0) ./ max.(Denom, eps(eltype(gsm.W)))
         end
 
 

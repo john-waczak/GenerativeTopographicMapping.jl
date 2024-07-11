@@ -243,7 +243,7 @@ end
     N2 = 15
     X2 = Tables.table(rand(rng, N2, 10))
 
-    model = GSMCombo(k=k, m=m, Nv=Nv, nepochs=100, rng=rng, zero_init=false)
+    model = GSMCombo(k=k, m=m, Nv=Nv, nepochs=100, rng=rng)
     mach = machine(model, X)
     fit!(mach, verbosity=0)
 
@@ -274,7 +274,7 @@ end
 
 
 @testset "gsm-big-linear-mlj.jl" begin
-    n_nodes = 100
+    n_nodes = 20
     Nv = 3
 
     # generate synthetic dataset for testing with 100 data points, 10 features, and 5 classes
@@ -313,7 +313,7 @@ end
 
 
 @testset "gsm-big-nonlinear-mlj.jl" begin
-    n_nodes = 100
+    n_nodes = 20
     n_rbfs = 20
     Nv = 3
 
@@ -362,7 +362,7 @@ end
     N2 = 15
     X2 = Tables.table(rand(rng, N2, 10))
 
-    model = GSMBigCombo(n_nodes=k, n_rbfs=m, Nv=Nv, nepochs=100, rng=rng, zero_init=false)
+    model = GSMBigCombo(n_nodes=k, n_rbfs=m, Nv=Nv, nepochs=100, rng=rng)
 
     mach = machine(model, X)
     fit!(mach, verbosity=0)

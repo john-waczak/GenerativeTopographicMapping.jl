@@ -10,13 +10,12 @@ mutable struct GSMBigCombo<: MLJModelInterface.Unsupervised
     tol::Float64
     nconverged::Int
     rng::Any
-    zero_init::Bool
 end
 
 
 
-function GSMBigCombo(; n_nodes=1000, n_rbfs=500, s=0.05, Nv=3, λe=0.01, λw=0.1, nepochs=100, niters=100, tol=1e-3, nconverged=4, rng=123, zero_init=true)
-    model = GSMBigCombo(n_nodes, n_rbfs, s, Nv, λe, λw, nepochs, niters, tol, nconverged, mk_rng(rng), zero_init)
+function GSMBigCombo(; n_nodes=1000, n_rbfs=500, s=0.05, Nv=3, λe=0.01, λw=0.1, nepochs=100, niters=100, tol=1e-3, nconverged=4, rng=123,)
+    model = GSMBigCombo(n_nodes, n_rbfs, s, Nv, λe, λw, nepochs, niters, tol, nconverged, mk_rng(rng),)
     message = MLJModelInterface.clean!(model)
     isempty(message) || @warn message
     return model
@@ -93,7 +92,7 @@ function MLJModelInterface.fit(m::GSMBigCombo, verbosity, Datatable)
     end
 
     # 1. build the GTM
-    gsm = GSMBigComboBase(m.n_nodes, m.n_rbfs, m.s, m.Nv, X; rng=m.rng, zero_init=m.zero_init)
+    gsm = GSMBigComboBase(m.n_nodes, m.n_rbfs, m.s, m.Nv, X; rng=m.rng,)
 
     @assert all(gsm.W .≥ 0.0)
 

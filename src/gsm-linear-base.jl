@@ -81,6 +81,15 @@ function fit!(gsm::GSMLinearBase, X; λ = 0.1, nepochs=100, tol=1e-3, nconverged
     nclose = 0
     converged = false
 
+
+    # preallocate matrices
+    Numer = zeros(size(gsm.W))
+    Denom = zeros(size(gsm.W))
+
+    XtRt = X'*gsm.R'
+    WΦt = gsm.W*gsm.Φ'
+    GΦ = G*gsm.Φ
+
     for i in 1:nepochs
 
         # EXPECTATION
@@ -102,7 +111,23 @@ function fit!(gsm::GSMLinearBase, X; λ = 0.1, nepochs=100, tol=1e-3, nconverged
         # 2. update weight matrix
         # gsm.W = ((gsm.Φ'*G*gsm.Φ + λ*gsm.β⁻¹*I)\(gsm.Φ'*gsm.R*X))'
         for step ∈ 1:n_steps
-            gsm.W .*= max.(( X' * gsm.R' * gsm.Φ ./ gsm.β⁻¹), 0.0) ./ max.((gsm.W * gsm.Φ' * G * gsm.Φ ./ gsm.β⁻¹ + λ .* gsm.W), eps(eltype(gsm.W)))
+            # gsm.W .*= max.(( X' * gsm.R' * gsm.Φ ./ gsm.β⁻¹), 0.0) ./ max.((gsm.W * gsm.Φ' * G * gsm.Φ ./ gsm.β⁻¹ + λ .* gsm.W), eps(eltype(gsm.W)))
+
+            # update numerator
+            mul!(XtRt, X', gsm.R')
+            mul!(Numer, XtRt, gsm.Φ)
+            Numer ./= gsm.β⁻¹
+
+            # update denominator
+            mul!(WΦt, gsm.W, gsm.Φ')
+            mul!(GΦ, G, gsm.Φ)
+            mul!(Denom, WΦt, GΦ)
+
+            Denom ./= gsm.β⁻¹
+            Denom .+= λ .* gsm.W
+
+            # update weights
+            gsm.W .*= max.(Numer, 0.0) ./ max.(Denom, eps(eltype(gsm.W)))
         end
 
         # 3. update precision β
