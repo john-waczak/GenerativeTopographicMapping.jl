@@ -36,7 +36,7 @@ function MLJModelInterface.clean!(m::GSMNonlinear)
 
     if m.s ≤ 0
         warning *= "Parameter `s` expected to be positive, resetting to 1\n"
-        m.s = 1
+        m.s = 1.0
     end
 
     if m.Nv ≤ 0

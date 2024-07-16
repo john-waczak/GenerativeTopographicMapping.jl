@@ -11,7 +11,7 @@ mutable struct GSMBigNonlinear<: MLJModelInterface.Unsupervised
     rng::Any
 end
 
-function GSMBigNonlinear(; n_nodes=1000, n_rbfs=500, s=0.05, Nv=3, λ=0.1, nepochs=100, niters=100, tol=1e-3, nconverged=4, rng=123)
+function GSMBigNonlinear(; n_nodes=1000, n_rbfs=500, s=0.25, Nv=3, λ=0.1, nepochs=100, niters=100, tol=1e-3, nconverged=4, rng=123)
     model = GSMBigNonlinear(n_nodes, n_rbfs, s, Nv, λ, nepochs, niters, tol, nconverged, mk_rng(rng))
     message = MLJModelInterface.clean!(model)
     isempty(message) || @warn message
@@ -33,9 +33,10 @@ function MLJModelInterface.clean!(m::GSMBigNonlinear)
         m.n_rbfs = 500
     end
 
-    if m.s ≤ 0.0 || m.s ≥ 1.0
-        warning *= "Parameter `s` expected to be in [0,1], resetting to 0.05\n"
-        m.s = 0.05
+
+    if m.s ≤ 0
+        warning *= "Parameter `s` expected to be positive, resetting to 0.25\n"
+        m.s = 0.25
     end
 
     if m.Nv ≤ 0
