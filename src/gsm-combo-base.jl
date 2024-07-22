@@ -76,7 +76,7 @@ end
 
 
 
-function fit!(gsm::GSMComboBase, Nv, X; λe = 0.01, λw=0.1, nepochs=100, tol=1e-3, nconverged=5, verbose=false, n_steps =100)
+function fit!(gsm::GSMComboBase, Nv, X; λe = 0.01, λw=0.1, nepochs=10, tol=1e-3, nconverged=5, verbose=false, n_steps =100)
     # get the needed dimensions
     N,D = size(X)
 
@@ -93,7 +93,9 @@ function fit!(gsm::GSMComboBase, Nv, X; λe = 0.01, λw=0.1, nepochs=100, tol=1e
     end
 
     # this replaces the diagonal matrix in M-step
-    Λ = Diagonal(vcat(λe * ones(Nv), λw * ones(M-Nv)))
+    # Λ = Diagonal(vcat(λe * ones(Nv), λw * ones(M-Nv)))
+    Λ = λw .* ones(size(gsm.W))
+    Λ[:, 1:Nv] .= λe .* gsm.W[:, 1:Nv]
 
     Q = 0.0
     Q_prev = 0.0
@@ -111,7 +113,6 @@ function fit!(gsm::GSMComboBase, Nv, X; λe = 0.01, λw=0.1, nepochs=100, tol=1e
     XtRt = X'*gsm.R'
     WΦt = gsm.W*gsm.Φ'
     GΦ = G*gsm.Φ
-    WΛ = gsm.W*Λ
 
     @assert all(gsm.W .≥ 0.0)
 
@@ -129,7 +130,6 @@ function fit!(gsm::GSMComboBase, Nv, X; λe = 0.01, λw=0.1, nepochs=100, tol=1e
         # MAXIMIZATION
 
         # 1. Update the πk values
-        # gsm.πk .= (1/N) .* sum(gsm.R, dims=2)
         gsm.πk .= max.((1/N) .* sum(gsm.R, dims=2), eps(eltype(gsm.πk)))
         for n ∈ axes(LnΠ,2)
             LnΠ[:,n] .= log.(gsm.πk)
@@ -137,10 +137,9 @@ function fit!(gsm::GSMComboBase, Nv, X; λe = 0.01, λw=0.1, nepochs=100, tol=1e
 
 
         # 2. update weight matrix
-        # gsm.W = ((gsm.Φ'*G*gsm.Φ + gsm.β⁻¹*Λ)\(gsm.Φ'*gsm.R*X))'
-
         for step ∈ 1:n_steps
-            # gsm.W .*= max.((X' * gsm.R' * gsm.Φ ./ gsm.β⁻¹), 0.0) ./ max.((gsm.W * gsm.Φ' * G * gsm.Φ ./ gsm.β⁻¹ + (gsm.W * Λ)), eps(eltype(gsm.W)))
+            # update Λ matrix
+            Λ[:, 1:Nv] .= λe .* gsm.W[:, 1:Nv]
 
             # update numerator
             mul!(XtRt, X', gsm.R')
@@ -150,15 +149,14 @@ function fit!(gsm::GSMComboBase, Nv, X; λe = 0.01, λw=0.1, nepochs=100, tol=1e
             # update denominator
             mul!(WΦt, gsm.W, gsm.Φ')
             mul!(GΦ, G, gsm.Φ)
-            mul!(WΛ, gsm.W, Λ)
+
             mul!(Denom, WΦt, GΦ)
             Denom ./= gsm.β⁻¹
-            Denom .+= WΛ
+            Denom .+= Λ
 
             # update weights
             gsm.W .*= max.(Numer, 0.0) ./ max.(Denom, eps(eltype(gsm.W)))
         end
-
 
         @assert all(gsm.W .≥ 0.0)
 
@@ -169,21 +167,23 @@ function fit!(gsm::GSMComboBase, Nv, X; λe = 0.01, λw=0.1, nepochs=100, tol=1e
 
         # UPDATE LOG-LIKELIHOOD
         prefac = (N*D/2)*log(1/(2* gsm.β⁻¹* π))
+        gsm.Δ² .*= -(1/(2*gsm.β⁻¹))
 
         if i == 1
-            l = max(prefac + sum(logsumexp(gsm.Δ² .* LnΠ, dims=1)), nextfloat(typemin(1.0)))
+            # l = max(prefac + sum(logsumexp(gsm.Δ² .* LnΠ, dims=1)), nextfloat(typemin(1.0)))
+            l = max(prefac + sum(logsumexp(gsm.Δ² .+ LnΠ, dims=1)), nextfloat(typemin(1.0)))
 
-            Q = (N*D/2)*log(1/(2* gsm.β⁻¹* π)) + sum(gsm.R .* LnΠ) - sum(gsm.R .* gsm.Δ²)  + (D*(M-Nv)/2)*log(λw/(2π)) + ((D*Nv)/2)*log(λe/(2π))  - (λe/2)*sum(gsm.W[:,1:Nv])  - (λe/2)*sum(gsm.W[:,Nv+1:end])
+            Q = (N*D/2)*log(1/(2* gsm.β⁻¹* π)) + sum(gsm.R .* (LnΠ .- gsm.Δ²)) + ((D*Nv)/2)*log(λe/(2π)) - (λe/2)*sum(gsm.W[:,1:Nv].^2)  + D*(M-Nv)*log(λw/2) - λw*sum(gsm.W[:,Nv+1:end])
 
             push!(llhs, l)
             push!(Qs, Q)
         else
             Q_prev = Q
 
-            l = max(prefac + sum(logsumexp(gsm.Δ² .* LnΠ, dims=1)), nextfloat(typemin(1.0)))
+            # l = max(prefac + sum(logsumexp(gsm.Δ² .* LnΠ, dims=1)), nextfloat(typemin(1.0)))
+            l = max(prefac + sum(logsumexp(gsm.Δ² .+ LnΠ, dims=1)), nextfloat(typemin(1.0)))
 
-            Q = (N*D/2)*log(1/(2* gsm.β⁻¹* π)) + sum(gsm.R .* LnΠ) - sum(gsm.R .* gsm.Δ²)  + (D*(M-Nv)/2)*log(λw/(2π)) + ((D*Nv)/2)*log(λe/(2π))  - (λe/2)*sum(gsm.W[:,1:Nv])  - (λe/2)*sum(gsm.W[:,Nv+1:end])
-
+            Q = (N*D/2)*log(1/(2* gsm.β⁻¹* π)) + sum(gsm.R .* (LnΠ .- gsm.Δ²)) + ((D*Nv)/2)*log(λe/(2π)) - (λe/2)*sum(gsm.W[:,1:Nv].^2)  + D*(M-Nv)*log(λw/2) - λw*sum(gsm.W[:,Nv+1:end])
 
             push!(llhs, l)
             push!(Qs, Q)

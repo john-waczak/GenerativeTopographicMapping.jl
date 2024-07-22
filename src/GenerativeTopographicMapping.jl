@@ -47,25 +47,6 @@ include("gsm-big-combo-base.jl")
 include("gsm-big-combo-mlj.jl")
 
 
-# # GSMMultupLinear
-# include("gsm-multup-linear-base.jl")
-# include("gsm-multup-linear-mlj.jl")
-
-
-# # GSMMultupNoninear
-# include("gsm-multup-nonlinear-base.jl")
-# include("gsm-multup-nonlinear-mlj.jl")
-
-# # # GSMMultupBigLinear
-# include("gsm-multup-big-linear-base.jl")
-# include("gsm-multup-big-linear-mlj.jl")
-
-# # GSMMultupBigNonlinear
-# include("gsm-multup-big-nonlinear-base.jl")
-# include("gsm-multup-big-nonlinear-mlj.jl")
-
-
-
 export GTM
 
 export GSMLinear

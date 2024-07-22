@@ -13,7 +13,7 @@ end
 
 
 
-function GSMCombo(; k=10, m=5, Nv=3, λe=0.01, λw=0.1, nepochs=100, niters=100, tol=1e-3, nconverged=4, rng=123)
+function GSMCombo(; k=10, m=5, Nv=3, λe=0.01, λw=0.1, nepochs=10, niters=100, tol=1e-3, nconverged=4, rng=123)
     model = GSMCombo(k, m, Nv, λe, λw, nepochs, niters, tol, nconverged, mk_rng(rng))
     message = MLJModelInterface.clean!(model)
     isempty(message) || @warn message
@@ -55,8 +55,8 @@ function MLJModelInterface.clean!(m::GSMCombo)
     end
 
     if m.niters ≤ 0
-        warning *= "Parameter `niters` expected to be positive, resetting to 100\n"
-        m.niters = 100
+        warning *= "Parameter `niters` expected to be positive, resetting to 10\n"
+        m.niters = 10
     end
 
     if m.tol ≤ 0

@@ -138,19 +138,24 @@ function fit!(gsm::GSMLinearBase, X; λ = 0.1, nepochs=100, tol=1e-3, nconverged
 
         # UPDATE Q and LOG-LIKELIHOOD
         prefac = (N*D/2)*log(1/(2* gsm.β⁻¹* π))
+        gsm.Δ² .*= -(1/(2*gsm.β⁻¹))
 
         if i == 1
-            l = max(prefac + sum(logsumexp(gsm.Δ² .* LnΠ, dims=1)), nextfloat(typemin(1.0)))
+            # l = max(prefac + sum(logsumexp(gsm.Δ² .* LnΠ, dims=1)), nextfloat(typemin(1.0)))
+            l = max(prefac + sum(logsumexp(gsm.Δ² .+ LnΠ, dims=1)), nextfloat(typemin(1.0)))
 
-            Q = (N*D/2)*log(1/(2* gsm.β⁻¹* π)) + sum(gsm.R .* LnΠ) + (length(gsm.W)/2)*log(λ/(2π)) - sum(gsm.R .* gsm.Δ²) - (λ/2)*sum(gsm.W)
+            # Q = (N*D/2)*log(1/(2* gsm.β⁻¹* π)) + sum(gsm.R .* LnΠ) + (length(gsm.W)/2)*log(λ/(2π)) - sum(gsm.R .* gsm.Δ²) - (λ/2)*sum(gsm.W)
+            Q = (N*D/2)*log(1/(2* gsm.β⁻¹* π)) + sum(gsm.R .* (LnΠ .- gsm.Δ²)) + (length(gsm.W)/2)*log(λ/(2π)) - (λ/2)*sum(gsm.W .^ 2)
 
             push!(llhs, l)
             push!(Qs, Q)
         else
             Q_prev = Q
 
-            l = max(prefac + sum(logsumexp(gsm.Δ² .* LnΠ, dims=1)), nextfloat(typemin(1.0)))
-            Q = (N*D/2)*log(1/(2* gsm.β⁻¹* π)) + sum(gsm.R .* LnΠ) + (length(gsm.W)/2)*log(λ/(2π)) - sum(gsm.R .* gsm.Δ²) - (λ/2)*sum(gsm.W)
+            # l = max(prefac + sum(logsumexp(gsm.Δ² .* LnΠ, dims=1)), nextfloat(typemin(1.0)))
+            l = max(prefac + sum(logsumexp(gsm.Δ² .+ LnΠ, dims=1)), nextfloat(typemin(1.0)))
+            # Q = (N*D/2)*log(1/(2* gsm.β⁻¹* π)) + sum(gsm.R .* LnΠ) + (length(gsm.W)/2)*log(λ/(2π)) - sum(gsm.R .* gsm.Δ²) - (λ/2)*sum(gsm.W)
+            Q = (N*D/2)*log(1/(2* gsm.β⁻¹* π)) + sum(gsm.R .* (LnΠ .- gsm.Δ²)) + (length(gsm.W)/2)*log(λ/(2π)) - (λ/2)*sum(gsm.W .^ 2)
 
             push!(llhs, l)
             push!(Qs, Q)

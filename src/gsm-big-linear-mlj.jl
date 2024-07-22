@@ -9,7 +9,7 @@ mutable struct GSMBigLinear<: MLJModelInterface.Unsupervised
     rng::Any
 end
 
-function GSMBigLinear(; n_nodes=1000, Nv=3, λ=0.1, nepochs=100, niters=100, tol=1e-3, nconverged=4, rng=123)
+function GSMBigLinear(; n_nodes=1000, Nv=3, λ=0.1, nepochs=100, niters=10, tol=1e-3, nconverged=4, rng=123)
     model = GSMBigLinear(n_nodes, Nv, λ, nepochs, niters, tol, nconverged, mk_rng(rng))
     message = MLJModelInterface.clean!(model)
     isempty(message) || @warn message
@@ -42,8 +42,8 @@ function MLJModelInterface.clean!(m::GSMBigLinear)
     end
 
     if m.niters ≤ 0
-        warning *= "Parameter `niters` expected to be positive, resetting to 100\n"
-        m.niters = 100
+        warning *= "Parameter `niters` expected to be positive, resetting to 10\n"
+        m.niters = 10
     end
 
     if m.tol ≤ 0

@@ -269,6 +269,27 @@ end
 
     @test all(rpt[:W] .≥ 0.0)
 
+
+    # fit again with large λw and check sparsity
+    model = GSMCombo(k=k, m=m, Nv=Nv, λw=0.001, nepochs=100, rng=rng, tol=1e-6)
+    mach = machine(model, X)
+    fit!(mach, verbosity=0)
+
+    rpt = report(mach)
+    W = rpt[:W]
+    μ1 = mean(W[:, Nv+1:end])
+
+    model = GSMCombo(k=k, m=m, Nv=Nv, λw=1.0, nepochs=100, rng=rng, tol=1e-6)
+    mach = machine(model, X)
+    fit!(mach, verbosity=0)
+
+    rpt = report(mach)
+    W = rpt[:W]
+    μ2 = mean(W[:, Nv+1:end])
+
+    println(μ1, "\t", μ2)
+    @test μ2 < μ1
+    @test isapprox(μ2, 0.0, atol=1e-8)
 end
 
 
