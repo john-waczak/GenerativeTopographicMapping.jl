@@ -46,7 +46,6 @@ include("gsm-big-nonlinear-mlj.jl")
 include("gsm-big-combo-base.jl")
 include("gsm-big-combo-mlj.jl")
 
-
 export GTM
 
 export GSMLinear

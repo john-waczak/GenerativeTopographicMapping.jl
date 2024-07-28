@@ -24,16 +24,14 @@ function GSMComboBase(k, m, Nᵥ, X; rng=mk_rng(123))
 
     # 3. create grid of M rbf centers (means)
     M = get_barycentric_grid_coords(m, Nᵥ)'
-    # remove nodes at vertices
-    idx_notvert = vcat([findall( .!(isapprox.(M[:,j], 1, atol=1e-8))) for j ∈ axes(M,2)]...)
-    M = M[idx_notvert, :]
 
+    # remove nodes at vertices
+    M = M[[!any(isapprox.(M[i, :], 1.0, atol=1e-8)) for i ∈ axes(M,1)], :]
     # 4. create rbf activation matrix Φ
     Φ = []
 
     # add in linear terms
     push!(Φ, Z)
-
     let
         Δ = zeros(size(Z,1), size(M,1))
         pairwise!(euclidean, Δ, Z, M, dims=1)

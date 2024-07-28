@@ -116,6 +116,7 @@ end
 
     rpt = report(m)
     @test Set([:W, :β⁻¹, :Φ, :node_data_means, :Ξ, :llhs, :converged, :AIC, :BIC]) == Set(keys(rpt))
+
 end
 
 
@@ -175,6 +176,9 @@ end
     @test size(X_gsm) == (N2, 10)
 
     @test all(rpt[:W] .≥ 0.0)
+
+
+    @test all(rpt[:node_data_means] .== (rpt[:W] * rpt[:Φ]'))
 end
 
 
@@ -230,6 +234,9 @@ end
 
 
     @test all(rpt[:W] .≥ 0.0)
+
+
+    @test all(rpt[:node_data_means] .== (rpt[:W] * rpt[:Φ]'))
 end
 
 
@@ -287,9 +294,14 @@ end
     W = rpt[:W]
     μ2 = mean(W[:, Nv+1:end])
 
-    println(μ1, "\t", μ2)
     @test μ2 < μ1
     @test isapprox(μ2, 0.0, atol=1e-8)
+
+    @test all(rpt[:node_data_means] .== (rpt[:W] * rpt[:Φ]'))
+
+    idx_vertices = rpt[:idx_vertices]
+    @test all(rpt[:Φ][idx_vertices, Nv+1:end] .== 0.0)
+
 end
 
 
@@ -328,6 +340,9 @@ end
     @test size(X_gsm) == (N2, 10)
 
     @test all(rpt[:W] .≥ 0.0)
+
+
+    @test all(rpt[:node_data_means] .== (rpt[:W] * rpt[:Φ]'))
 end
 
 
@@ -368,6 +383,9 @@ end
     @test size(X_gsm) == (N2, 10)
 
     @test all(rpt[:W] .≥ 0.0)
+
+
+    @test all(rpt[:node_data_means] .== (rpt[:W] * rpt[:Φ]'))
 end
 
 
@@ -409,6 +427,11 @@ end
 
 
     @test all(rpt[:W] .≥ 0.0)
+
+    @test all(rpt[:node_data_means] .== (rpt[:W] * rpt[:Φ]'))
+
+    idx_vertices = rpt[:idx_vertices]
+    @test all(rpt[:Φ][idx_vertices, Nv+1:end] .== 0.0)
 end
 
 
